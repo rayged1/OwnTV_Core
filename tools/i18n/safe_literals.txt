@@ -6758,6 +6758,7 @@
 1	technical	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	track-list/$i/title
 3	technical	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	track-list/$i/type
 3	technical	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	track-list/count
+1	log	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	trimmed probe found audio but no video on a picture hand-off — re-probing fully
 1	log	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	trimmed probe found no audio — re-probing fully
 1	technical	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	ua=${if (currentUserAgent.isNullOrBlank()) "default" else "custom"}
 3	technical	player-core/src/main/java/tv/own/owntv/player/OwnTVPlayer.kt	unknown
