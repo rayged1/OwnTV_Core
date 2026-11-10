@@ -99,6 +99,8 @@ jobs:
       - name: Publish to the OwnTV Maven repository
         env:
           PAGES_TOKEN: ${{ secrets.CONSUMER_BUMP_TOKEN }}
+          # A fork publishes to its own gh-pages; upstream's script default is ahXN00's repo.
+          PAGES_REPO: ${{ github.repository }}
         run: |
           chmod +x ./gradlew
           ./gradlew publishAllPublicationsToStagingRepository --stacktrace

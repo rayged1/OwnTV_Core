@@ -28,7 +28,7 @@ import tempfile
 import time
 import urllib.request
 
-REPO = "ahXN00/OwnTV_Core"
+REPO = os.environ.get("PAGES_REPO", "ahXN00/OwnTV_Core")
 BRANCH = "gh-pages"
 SITE = "https://ahxn00.github.io/OwnTV_Core/maven"
 GROUP_PATH = "tv/own/owntv"
