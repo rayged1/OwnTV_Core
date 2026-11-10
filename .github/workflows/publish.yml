@@ -101,6 +101,7 @@ jobs:
           PAGES_TOKEN: ${{ secrets.CONSUMER_BUMP_TOKEN }}
           # A fork publishes to its own gh-pages; upstream's script default is ahXN00's repo.
           PAGES_REPO: ${{ github.repository }}
+          PAGES_SITE: https://${{ github.repository_owner }}.github.io/OwnTV_Core/maven
         run: |
           chmod +x ./gradlew
           ./gradlew publishAllPublicationsToStagingRepository --stacktrace
