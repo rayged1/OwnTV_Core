@@ -1263,6 +1263,9 @@ class OwnTVPlayer(
     @Volatile private var videoChainFailed = kotlinx.coroutines.CompletableDeferred<Unit>()
     @Volatile private var item = ItemState()
 
+    /** Set by [play] for the load it is about to queue; consumed when [ItemState] is built. */
+    @Volatile private var pendingExpectVideo = false
+
     @Volatile private var loadGeneration = 0
     // App-issued loadfile/stop commands can leave a cleanup END_FILE behind. Track those separately
     // so mpv's event thread can classify them as STOP instead of startup failure or reconnect.
@@ -2873,6 +2876,9 @@ class OwnTVPlayer(
         vodEngineOverride: tv.own.owntv.core.player.EnginePreference? = null,
         /** v44 — see [MediaMeta.trackKey]; null keys the remembered tracks on [contentKey]. */
         trackKey: String? = null,
+        /** The caller already knows this stream carries video (an ExoPlayer hand-off) — see
+         *  [ItemState.expectVideoOnFallback]. */
+        expectVideo: Boolean = false,
     ) {
         this.vodEngineOverride = vodEngineOverride
         // The provider belongs to the load. A VOD load with none clears whatever the previous
@@ -2894,6 +2900,7 @@ class OwnTVPlayer(
         updateNav()
         _zoomMode.value = defaultZoom // start new content at the user's default zoom
         if (!muted) setVolume(defaultVolume) // …and at the default volume; loadUrl re-applies any per-item override
+        pendingExpectVideo = expectVideo
         loadUrl(
             url,
             MediaMeta(title, subtitle, year, logoUrl, contentKey, seasonNumber, episodeNumber, rewindStartMs, trackKey),
@@ -3152,6 +3159,7 @@ class OwnTVPlayer(
             // THE reset. Everything a new item must not inherit is in [ItemState]; the values that are not
             // simply cleared are handed to the constructor, so the whole thing stays one statement.
             item = ItemState(
+                expectVideoOnFallback = pendingExpectVideo,
                 altFormatBaseUrl = url,
                 archiveThisItem = isArchive,
                 forceSoftwareThisLoad = wantSoftware,
@@ -3159,6 +3167,7 @@ class OwnTVPlayer(
                 // Already on the copy rung: the rescue ladder goes on to software, not back to copy.
                 triedCopyRescue = wantCopy,
             )
+            pendingExpectVideo = false
             sessionExternalSubs.clear() // genuinely new item → its own external-sub session
             applySubtitleDelay(0) // timing never carries onto another item/subtitle
             if (needReconfig) mpvAsync { applyRenderConfig() }
@@ -5129,6 +5138,21 @@ class OwnTVPlayer(
                     reloadCurrentInPlace()
                     return
                 }
+                // The mirror case, and the one a stall hand-off actually hits: ExoPlayer was playing this
+                // stream with picture, the trimmed probe opens in under a second with audio only (`video -`
+                // in the log), and no other watchdog fires — the no-video check wants a video codec to
+                // exist, so the start ladder carries it to its timeout and backoff before re-probing in
+                // full. Measured at ~5 s of a 24 s black screen on a real tower hand-off. Re-probe now.
+                // Only for a load the caller said carries video: a radio channel is genuinely audio-only
+                // and must not pay a full re-probe on every tune.
+                if (usedTrimmedProbe && item.expectVideoOnFallback && !item.forceFullProbe &&
+                    _audioTrackList.value.isNotEmpty() && mpvVideoTracks.isEmpty()
+                ) {
+                    android.util.Log.w(TAG, "trimmed probe found audio but no video on a picture hand-off — re-probing fully")
+                    item.forceFullProbe = true
+                    reloadCurrentInPlace()
+                    return
+                }
                 // A text subtitle the user picked while ExoPlayer was handling an image sub: apply it now
                 // that mpv has reloaded and re-enumerated its tracks.
                 item.pendingSelectSid?.let { sid ->
@@ -5773,6 +5797,10 @@ internal data class ItemState(
      *  end-of-file advance for the CURRENT item only. */
     var autoNextCancelled: Boolean = false,
     var liveStallReconnects: Int = 0,
+    /** This stream is known to carry video (ExoPlayer was playing it), so a trimmed probe that comes
+     *  back with audio and no video track under-read the stream — see the re-probe in the file-loaded
+     *  handler. */
+    @field:Volatile var expectVideoOnFallback: Boolean = false,
     /** A stream that will not start on the extension it was asked for is retried once on the other one -
      *  `.ts` or `.m3u8` - before erroring. For live that covers the panel which only serves HLS; for a
      *  catch-up archive the opposite, a panel whose live edge remuxes to HLS while its timeshift server

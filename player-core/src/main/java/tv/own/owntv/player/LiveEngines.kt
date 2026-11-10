@@ -16,6 +16,12 @@ data class LiveRequest(
     val drmConfig: String?,
     val manifestType: String?,
     val directSource: String?,
+    /**
+     * ExoPlayer had this stream open, so it is known to carry video. A trimmed fast-zap probe that comes
+     * back with audio and no video track on such a load missed the video PMT — [OwnTVPlayer] re-probes it
+     * fully at once instead of letting the start ladder time out first.
+     */
+    val expectVideo: Boolean = false,
 )
 
 /** What mpv did with a channel it was just given: playback started, or an error. */
@@ -143,6 +149,7 @@ class EnginePair(private val exo: LivePreviewEngine, private val mpv: OwnTVPlaye
         contentKey = request.meta.contentKey,
         livePrerollSecsOverride = request.prerollSecs,
         liveBufferOverride = request.liveBuffer,
+        expectVideo = request.expectVideo,
     )
 
     override fun mpvStop() = mpv.stop()

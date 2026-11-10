@@ -678,7 +678,7 @@ class LiveTuneController(
         }
         localUrl()?.let { local ->
             setReconnect(null, null)
-            engines.mpvPlay(local, tsRequest ?: request(channel, source))
+            engines.mpvPlay(local, (tsRequest ?: request(channel, source)).copy(expectVideo = true))
             host.onEngineStarted()
             watchMpv(channel, source)
             return
@@ -698,7 +698,7 @@ class LiveTuneController(
         val url = if (LiveStreamQuirks.isKnownHls(preferred)) LiveStreamQuirks.toHlsUrl(preferred) else preferred
         if (!isCurrent(channel)) return // zapped away while minting
         setReconnect(if (stalker) channel else null, source)
-        engines.mpvPlay(url, request(channel, source))
+        engines.mpvPlay(url, request(channel, source).copy(expectVideo = true))
         host.onEngineStarted()
         watchMpv(channel, source)
     }
