@@ -54,6 +54,16 @@ interface LiveEngines {
     val exoStillReconnecting: Boolean get() = false
     /** ExoPlayer cannot play this stream's content (see [LivePreviewEngine.contentBroken]). */
     val exoContentBroken: Boolean get() = false
+    /**
+     * Whether ExoPlayer has shown a picture for the tune in flight.
+     *
+     * A failure that arrives after the picture is not a tuning failure, so the opening budget — which
+     * exists to bound the black screen before a tune opens — must not refuse the ladder its next rung.
+     * Measured on a channel that played for 8 minutes and then stalled: `advance` saw an expired
+     * 60 s budget, found "no fallback left" and left an error on screen with mpv untried.
+     */
+    val exoHasPlayed: Boolean get() = false
+
     /** Whether mpv holds a stream (full-screen live, a film, a catch-up). */
     val mpvHasStream: Boolean
 
@@ -115,6 +125,7 @@ class EnginePair(private val exo: LivePreviewEngine, private val mpv: OwnTVPlaye
     override val exoFailed: Boolean get() = exo.state.value == LivePreviewEngine.State.ERROR
     override val exoStillReconnecting: Boolean get() = exo.stillReconnecting
     override val exoContentBroken: Boolean get() = exo.contentBroken
+    override val exoHasPlayed: Boolean get() = exo.hasPlayedThisTune
     override val mpvHasStream: Boolean get() = mpv.hasActiveStream
 
     override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) = exo.play(url, muted, request)

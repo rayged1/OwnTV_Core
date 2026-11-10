@@ -11,4 +11,4 @@ plugins {
     alias(libs.plugins.ksp) apply false
 }
 
-extra["coreVersion"] = "1.0.72-rayge.3"
+extra["coreVersion"] = "1.0.72-rayge.4"

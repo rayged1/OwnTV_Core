@@ -33,6 +33,7 @@ class LiveTuneControllerTest {
         override var exoFailed = false
         override var exoStillReconnecting = false
         override var exoContentBroken = false
+        override var exoHasPlayed = false
         override var mpvHasStream = false
 
         /** Complete with a reason to fail the ExoPlayer watch, or with null for "opened". */
@@ -210,6 +211,16 @@ class LiveTuneControllerTest {
     @Test
     fun `a stream ExoPlayer cannot play after it opened goes to mpv, budget or not`() = runTest {
         val engines = FakeEngines().apply { exoContentBroken = true }
+        stallAfterPlayingWithNoFallback(engines)
+        assertTrue(engines.log.any { it.startsWith("mpv:") })
+        assertFalse(engines.log.contains("exo-abandon"))
+    }
+
+    @Test
+    fun `a mid-stream failure after the budget expired still reaches mpv when a picture had played`() = runTest {
+        // The budget bounds the black screen before a tune opens. A channel that played for minutes and
+        // then lost its stream is not a tuning failure: the ladder must still be allowed to climb.
+        val engines = FakeEngines().apply { exoHasPlayed = true }
         stallAfterPlayingWithNoFallback(engines)
         assertTrue(engines.log.any { it.startsWith("mpv:") })
         assertFalse(engines.log.contains("exo-abandon"))

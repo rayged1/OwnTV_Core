@@ -1167,6 +1167,9 @@ class LivePreviewEngine(
      *  have it, whatever the tune's opening budget says. */
     val contentBroken: Boolean get() = tune.contentBroken
 
+    /** Whether this tune has shown a picture — see [LiveEngines.exoHasPlayed]. */
+    val hasPlayedThisTune: Boolean get() = tune.hasPlayed
+
     /**
      * An error that is about what the stream *contains*, not about the connection to it: an extractor
      * that crashed on the data (`UnexpectedLoaderException` — measured: Media3's AC-3 reader throwing

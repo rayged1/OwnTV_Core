@@ -826,7 +826,11 @@ class LiveTuneController(
         // ExoPlayer played this channel, then found its content unplayable (not a connection problem).
         // The opening budget is long spent by then, which would refuse mpv, the engine most likely to
         // play it: give this handover a fresh one.
-        if (_liveOnExo.value && engines.exoContentBroken) ladder.restartDeadline(nowMs, armedBudgetMs)
+        // A picture has already been on screen, so this is not a tuning failure and the opening budget
+        // does not apply: it bounds the black screen before a tune opens, and charging a mid-stream
+        // failure to it refused the fallback (measured: a channel that played for 8 minutes, stalled,
+        // flapped once, and was abandoned as "no fallback left" with mpv never tried).
+        if (_liveOnExo.value && (engines.exoContentBroken || engines.exoHasPlayed)) ladder.restartDeadline(nowMs, armedBudgetMs)
         val outOfTime = ladder.expired(nowMs)
         // A panel refusing the *request* (a busy 458, a 403, a rate limit) says nothing about the format,
         // so nothing may be learned from it.
