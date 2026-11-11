@@ -80,6 +80,7 @@ class LiveTuneControllerTimeshiftTest {
         override val exoIsHls = false
         override var exoFailed = false
         override var mpvHasStream = false
+        override var exoBufferedAheadMs = -1L
         var exoWatch: CompletableDeferred<String?>? = null
 
         override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) { exoUrl = url; log += "exo:$url" }
@@ -212,6 +213,54 @@ class LiveTuneControllerTimeshiftTest {
         val (c, engines) = comeBack(tv.own.owntv.core.settings.SettingsRepository.ResumeMode.AUTO, first = 30)
         assertNull(c.localTimeshift.value!!.resumeAtWallMs)
         assertFalse("opened inside the copy, not at its live edge", engines.log.last { it.startsWith("exo:") }.contains("/live."))
+    }
+
+    @Test
+    fun `a stall with nothing buffered ahead rewinds the saved copy instead of handing over`() = runBlocking {
+        val engines = Engines()
+        val c = LiveTuneController(scope, engines, Host())
+        c.tune(channel(60))
+        awaitLog(engines) { log -> log.any { it.startsWith("exo:") } }
+        val copyUrl = engines.exoUrl!!
+        assertTrue("playing the copy", TimeshiftServer.isLocal(copyUrl))
+        readLikeAPlayer(copyUrl)
+        // The ring has to hold something before a rewind can point at it.
+        val session = c.localTimeshift.value!!.session
+        withTimeoutOrNull(10_000) {
+            while (session.playableEdgeWallMs() == null) delay(50)
+        }
+        assertNotNull("the copy received pieces", session.playableEdgeWallMs())
+
+        // The feed stops: the playhead has reached the tail of the ring.
+        engines.exoBufferedAheadMs = 31L
+        engines.exoWatch!!.complete("played, then stalled for 15s without recovering")
+
+        awaitLog(engines) { log -> log.any { it.contains("the feed stopped, not the engine") } }
+        assertTrue(
+            "rewound the copy instead of handing over: ${engines.log}",
+            engines.log.any { it.contains("the feed stopped, not the engine") },
+        )
+        assertTrue("mpv was not given a drained ring: ${engines.log}", engines.log.none { it.startsWith("mpv:") })
+        assertFalse("the tune was not abandoned", engines.log.contains("exo-abandon"))
+        assertTrue(
+            "re-opened the copy, not the provider",
+            engines.log.count { it.startsWith("exo:") } >= 2 && engines.log.last { it.startsWith("exo:") }.let {
+                TimeshiftServer.isLocal(it.removePrefix("exo:"))
+            },
+        )
+    }
+
+    @Test
+    fun `a stall with media still buffered ahead is left to the ladder`() = runBlocking {
+        val engines = Engines()
+        val c = LiveTuneController(scope, engines, Host())
+        c.tune(channel(61))
+        awaitLog(engines) { log -> log.any { it.startsWith("exo:") } }
+        engines.exoBufferedAheadMs = 4_000L
+        engines.exoWatch!!.complete("played, then stalled for 15s without recovering")
+        awaitLog(engines) { log -> log.any { it.startsWith("mpv:") } }
+        assertTrue("the ladder still hands over: ${engines.log}", engines.log.any { it.startsWith("mpv:") })
+        assertTrue(engines.log.none { it.contains("the feed stopped, not the engine") })
     }
 
     /** Reads the copy at [url] as a player would: without a reader a copy parks itself after 4 s and stops saving. */

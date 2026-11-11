@@ -1171,6 +1171,21 @@ class LivePreviewEngine(
     val hasPlayedThisTune: Boolean get() = tune.hasPlayed
 
     /**
+     * How much media is buffered ahead of the playhead, or -1 when nothing is loaded.
+     *
+     * On a saved copy this is the one number that separates "the engine is broken" from "the feed has
+     * stopped": the copy is served from a local ring whose tail is the live edge, so with the upstream
+     * silent the playhead reaches that tail and there is nothing left to read. Measured 2026-11-10 at a
+     * cell hand-off: `pos=151822 buffered=151853` — 31 ms ahead — and the hand-off to mpv then waited
+     * 10 s on the same drained ring before timing out. See [LiveEngines.exoBufferedAheadMs].
+     */
+    val bufferedAheadMs: Long
+        get() {
+            val p = player ?: return -1L
+            return (p.bufferedPosition - p.currentPosition).coerceAtLeast(0L)
+        }
+
+    /**
      * An error that is about what the stream *contains*, not about the connection to it: an extractor
      * that crashed on the data (`UnexpectedLoaderException` — measured: Media3's AC-3 reader throwing
      * ArrayIndexOutOfBoundsException on corrupt frames), Media3's stuck-player check (video buffered,

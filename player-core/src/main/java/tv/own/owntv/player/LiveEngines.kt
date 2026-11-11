@@ -64,6 +64,17 @@ interface LiveEngines {
      */
     val exoHasPlayed: Boolean get() = false
 
+    /**
+     * Media buffered ahead of the playhead, or -1 when unknown.
+     *
+     * A saved copy is served from a local ring whose tail is the live edge: when the upstream stops,
+     * the playhead reaches that tail and nothing is left to read. Then the failure belongs to the
+     * feed, not to the engine, and handing the channel to mpv only makes a second engine wait on the
+     * same drained ring (measured: 10 s timeout, then the same URL opened in 716 ms once data came
+     * back). See [LiveTuneController]'s starved-copy branch.
+     */
+    val exoBufferedAheadMs: Long get() = -1L
+
     /** Whether mpv holds a stream (full-screen live, a film, a catch-up). */
     val mpvHasStream: Boolean
 
@@ -126,6 +137,7 @@ class EnginePair(private val exo: LivePreviewEngine, private val mpv: OwnTVPlaye
     override val exoStillReconnecting: Boolean get() = exo.stillReconnecting
     override val exoContentBroken: Boolean get() = exo.contentBroken
     override val exoHasPlayed: Boolean get() = exo.hasPlayedThisTune
+    override val exoBufferedAheadMs: Long get() = exo.bufferedAheadMs
     override val mpvHasStream: Boolean get() = mpv.hasActiveStream
 
     override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) = exo.play(url, muted, request)

@@ -158,6 +158,9 @@ class LiveTuneController(
     /** When this controller last stopped ExoPlayer, for [awaitExoRelease]. */
     private var exoStoppedAtMs: Long? = null
 
+    /** How many times this tune has rewound its saved copy because the feed ran dry. */
+    private var starvedRewinds = 0
+
     private var tuneJob: Job? = null
     private var previewJob: Job? = null
     private var exoResolveJob: Job? = null
@@ -523,6 +526,35 @@ class LiveTuneController(
     private fun localUrl(): String? = ts?.takeIf { !it.isClosed }?.let { TimeshiftServer.urlFor(it, tsFromIndex) }
 
     /**
+     * Rewind the saved copy when the stall is the feed running dry, and say whether it did.
+     *
+     * Both engines read this copy through the same loopback ring, so an engine swap cannot produce a
+     * byte the ring does not have; re-opening the copy a little further back does. [MAX_STARVED_REWINDS]
+     * caps how long one outage can be papered over (≈2 minutes at the default step), after which the
+     * ladder behaves exactly as before.
+     */
+    private fun rewindStarvedCopy(channel: ChannelEntity, source: SourceEntity?, reason: String): Boolean {
+        val session = ts?.takeIf { !it.isClosed } ?: return false
+        if (!TimeshiftServer.isLocal(engines.exoUrl)) return false
+        val ahead = engines.exoBufferedAheadMs
+        if (ahead < 0L || ahead > STARVED_AHEAD_MS) return false
+        if (starvedRewinds >= MAX_STARVED_REWINDS) return false
+        val watching = timeshiftWatchingWallMs() ?: return false
+        val piece = session.pieceAt(watching - STARVED_REWIND_MS) ?: return false
+        if (piece == tsFromIndex) return false
+        starvedRewinds++
+        tsFromIndex = piece
+        engineLog(
+            "'${channel.name}' has ${ahead}ms ahead of the playhead — the feed stopped, not the engine; " +
+                "rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)",
+        )
+        // Detached: re-opening the copy re-arms the watchers, and the watcher that called this would
+        // cancel itself at its first suspension point.
+        scope.launch { startOnExo(channel, source) }
+        return true
+    }
+
+    /**
      * The copy could not reconnect (an outage longer than its reconnect budget): the channel is opened again
      * instead. Giving up here left the engine on the copy's closed loopback address, and its own "network
      * restored" retry asked that address for ever (404) — "Reconnecting…" that never ended. A fresh tune
@@ -766,6 +798,7 @@ class LiveTuneController(
 
     private suspend fun arm(channel: ChannelEntity, source: SourceEntity?, preference: EnginePreference) {
         forceTsFor = null
+        starvedRewinds = 0
         val secs = SourceOverrides.liveTuneTimeoutSecsOf(source) ?: host.globalBudgetSecs()
         armedBudgetMs = if (secs <= 0) LiveLadder.NO_BUDGET else secs * 1000L
         ladder.arm(channel.streamUrl, preference, budgetMs = armedBudgetMs, nowMs = host.nowMs()) {
@@ -823,6 +856,12 @@ class LiveTuneController(
     ) {
         if (!ladder.owns(channel.streamUrl)) return // a newer tune owns the ladder now
         val nowMs = host.nowMs()
+        // A saved copy ends where the ring ends: with the upstream silent the playhead reaches that
+        // tail and there is nothing left to read. That is the feed failing, not the engine — handing
+        // over to mpv only makes a second engine wait on the same drained ring (measured: 10 s timeout,
+        // then the identical URL opened in 716 ms once data returned). Rewind the copy instead: a
+        // picture from data already on disk, and time for the feed to come back.
+        if (_liveOnExo.value && rewindStarvedCopy(channel, source, reason)) return
         // ExoPlayer played this channel, then found its content unplayable (not a connection problem).
         // The opening budget is long spent by then, which would refuse mpv, the engine most likely to
         // play it: give this handover a fresh one.
@@ -1057,5 +1096,22 @@ class LiveTuneController(
 
         /** Behind the copy's edge by more than this is not live any more (the rewind counter's own slack). */
         const val LIVE_SLACK_MS = 8_000L
+
+        /**
+         * At or below this much buffered ahead of the playhead, a saved copy has nothing to read: the
+         * ring's tail IS the live edge and the upstream stopped. Measured at a cell hand-off:
+         * `pos=151822 buffered=151853` — 31 ms. Not zero because the playhead is never exactly on the
+         * last decoded sample.
+         */
+        const val STARVED_AHEAD_MS = 750L
+
+        /** How far back a starved copy is re-opened. Twenty seconds of picture per attempt. */
+        const val STARVED_REWIND_MS = 20_000L
+
+        /**
+         * Attempts per tune, so an outage longer than the ring cannot loop for ever: six attempts is
+         * about two minutes of cover, after which the ladder and its budget are back in charge.
+         */
+        const val MAX_STARVED_REWINDS = 6
     }
 }
