@@ -1171,6 +1171,12 @@ class LivePreviewEngine(
     val hasPlayedThisTune: Boolean get() = tune.hasPlayed
 
     /**
+     * How much media was buffered ahead when this tune last stopped playing, or -1 — see
+     * [LiveEngines.exoBufferedAheadAtStallMs]. Sampled at the stall's onset, not read later.
+     */
+    val bufferedAheadAtStallMs: Long get() = tune.stallAheadMs
+
+    /**
      * How much media is buffered ahead of the playhead, or -1 when nothing is loaded.
      *
      * On a saved copy this is the one number that separates "the engine is broken" from "the feed has
@@ -1277,6 +1283,8 @@ class LivePreviewEngine(
                     // After it has played, a long buffer == a dropped feed → reconnect (live streams don't
                     // resume on their own here). Before first play, leave initial load alone.
                     if (tune.hasPlayed && !tune.gaveUp) {
+                        // Sample why it stalled, now — see [Tune.stallAheadMs]. Re-priming later erases it.
+                        if (_stalledSinceMs.value == null) tune.stallAheadMs = bufferedAheadMs
                         if (_stalledSinceMs.value == null) _stalledSinceMs.value = android.os.SystemClock.elapsedRealtime()
                         LiveDiagnosticsLog.event("stallWatchdog armed (${STALL_MS}ms)")
                         mainHandler.removeCallbacks(stallWatchdog); mainHandler.postDelayed(stallWatchdog, STALL_MS)
@@ -3933,6 +3941,14 @@ internal data class TuneState(
      *  fallback can quietly land a channel on software while the setting still reads on. */
     @field:Volatile var lastVideoDecoderHardware: Boolean? = null,
     var hasPlayed: Boolean = false,
+    /**
+     * How much media was buffered ahead of the playhead when this tune last left PLAYING, or -1.
+     *
+     * Sampled at the stall's onset on purpose: by the time the ladder decides (15 s later) the engine's
+     * own reconnect has often re-primed the buffer, so the live number says nothing about why it stalled.
+     * A saved copy that stalls with ~0 ms ahead hit the end of its ring — the feed stopped, not the engine.
+     */
+    var stallAheadMs: Long = -1L,
     var retryCount: Int = 0,
     /** Errors after the first frame that say the stream's *content* is unplayable here (see
      *  [LivePreviewEngine.isContentFailure]); reset by sustained playback. */

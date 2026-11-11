@@ -75,6 +75,15 @@ interface LiveEngines {
      */
     val exoBufferedAheadMs: Long get() = -1L
 
+    /**
+     * The same measurement, taken at the stall's onset rather than when the ladder decides.
+     *
+     * Fifteen seconds pass between the two, and the engine's own reconnect usually re-primes the buffer
+     * in that time: measured 2026-11-11 a stall began at `pos=163021 buffered=163094` (73 ms) and by the
+     * hand-over the live number no longer looked starved, so nothing rewound.
+     */
+    val exoBufferedAheadAtStallMs: Long get() = -1L
+
     /** Whether mpv holds a stream (full-screen live, a film, a catch-up). */
     val mpvHasStream: Boolean
 
@@ -138,6 +147,7 @@ class EnginePair(private val exo: LivePreviewEngine, private val mpv: OwnTVPlaye
     override val exoContentBroken: Boolean get() = exo.contentBroken
     override val exoHasPlayed: Boolean get() = exo.hasPlayedThisTune
     override val exoBufferedAheadMs: Long get() = exo.bufferedAheadMs
+    override val exoBufferedAheadAtStallMs: Long get() = exo.bufferedAheadAtStallMs
     override val mpvHasStream: Boolean get() = mpv.hasActiveStream
 
     override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) = exo.play(url, muted, request)

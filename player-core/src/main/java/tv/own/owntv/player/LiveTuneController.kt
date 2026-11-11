@@ -534,14 +534,33 @@ class LiveTuneController(
      * ladder behaves exactly as before.
      */
     private fun rewindStarvedCopy(channel: ChannelEntity, source: SourceEntity?, reason: String): Boolean {
-        val session = ts?.takeIf { !it.isClosed } ?: return false
-        if (!TimeshiftServer.isLocal(engines.exoUrl)) return false
-        val ahead = engines.exoBufferedAheadMs
-        if (ahead < 0L || ahead > STARVED_AHEAD_MS) return false
-        if (starvedRewinds >= MAX_STARVED_REWINDS) return false
-        val watching = timeshiftWatchingWallMs() ?: return false
-        val piece = session.pieceAt(watching - STARVED_REWIND_MS) ?: return false
-        if (piece == tsFromIndex) return false
+        val session = ts?.takeIf { !it.isClosed }
+        val local = TimeshiftServer.isLocal(engines.exoUrl)
+        // Prefer the sample taken when it stalled: by now the engine's own reconnect may have re-primed
+        // the buffer, which makes the live number say nothing about why it stopped.
+        val ahead = engines.exoBufferedAheadAtStallMs.takeIf { it >= 0L } ?: engines.exoBufferedAheadMs
+        // Where the playhead sits in the ring, or — when the engine has already dropped its reader — the
+        // copy's own playable edge, which is where a starved playhead was sitting anyway.
+        val watching = timeshiftWatchingWallMs() ?: session?.playableEdgeWallMs()
+        val piece = watching?.let { at -> session?.pieceAt(at - STARVED_REWIND_MS) }
+        val declined = when {
+            session == null -> "the copy is closed"
+            !local -> "not playing the copy"
+            ahead < 0L -> "the engine reports no media"
+            ahead > STARVED_AHEAD_MS -> "still ${ahead}ms ahead"
+            starvedRewinds >= MAX_STARVED_REWINDS -> "already rewound $starvedRewinds times"
+            watching == null -> "no playhead position"
+            piece == null -> "nothing saved ${STARVED_REWIND_MS / 1000}s back"
+            piece == tsFromIndex -> "already at that piece"
+            else -> null
+        }
+        if (declined != null) {
+            // Only near the starved signature: this is the line that says why a stall was not rewound.
+            if (local && ahead in 0..STARVED_LOG_MS) {
+                engineLog("'${channel.name}' is starved ($ahead ms ahead) but not rewinding: $declined")
+            }
+            return false
+        }
         starvedRewinds++
         tsFromIndex = piece
         engineLog(
@@ -1107,6 +1126,12 @@ class LiveTuneController(
 
         /** How far back a starved copy is re-opened. Twenty seconds of picture per attempt. */
         const val STARVED_REWIND_MS = 20_000L
+
+        /**
+         * A stall this close to dry is worth a log line either way: it is the only place that says why a
+         * starved copy was, or was not, rewound.
+         */
+        const val STARVED_LOG_MS = 2_000L
 
         /**
          * Attempts per tune, so an outage longer than the ring cannot loop for ever: six attempts is
