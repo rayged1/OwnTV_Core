@@ -224,11 +224,13 @@ class LiveTuneControllerTimeshiftTest {
         val copyUrl = engines.exoUrl!!
         assertTrue("playing the copy", TimeshiftServer.isLocal(copyUrl))
         readLikeAPlayer(copyUrl)
-        // The ring has to hold a piece before a rewind can point at one.
+        // The ring has to hold a piece, and a reader has to be attached (the copy is served to readers
+        // only; readingFromWallMs is what the rewind is measured from).
         val session = c.localTimeshift.value!!.session
         withTimeoutOrNull(10_000) {
-            while (session.pieceAt(System.currentTimeMillis()) == null) delay(50)
+            while (session.readingFromWallMs == null || session.pieceAt(System.currentTimeMillis()) == null) delay(50)
         }
+        assertNotNull("a reader registered on the copy", session.readingFromWallMs)
         assertNotNull(
             "the copy received pieces",
             session.pieceAt(System.currentTimeMillis()),
