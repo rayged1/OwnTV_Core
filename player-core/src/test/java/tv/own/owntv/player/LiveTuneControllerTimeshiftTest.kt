@@ -235,19 +235,12 @@ class LiveTuneControllerTimeshiftTest {
         engines.exoBufferedAheadMs = 31L
         engines.exoWatch!!.complete("played, then stalled for 15s without recovering")
 
-        awaitLog(engines) { log -> log.any { it.contains("the feed stopped, not the engine") } }
-        assertTrue(
-            "rewound the copy instead of handing over: ${engines.log}",
-            engines.log.any { it.contains("the feed stopped, not the engine") },
-        )
+        awaitLog(engines) { log -> log.count { it.startsWith("exo:") } >= 2 }
+        val urls = engines.log.filter { it.startsWith("exo:") }.map { it.removePrefix("exo:") }
+        assertTrue("re-opened the copy: $urls", urls.size >= 2 && urls.drop(1).all { TimeshiftServer.isLocal(it) })
+        assertFalse("rewound inside the copy, not back to its live edge: $urls", urls.last().endsWith("/live.ts"))
         assertTrue("mpv was not given a drained ring: ${engines.log}", engines.log.none { it.startsWith("mpv:") })
         assertFalse("the tune was not abandoned", engines.log.contains("exo-abandon"))
-        assertTrue(
-            "re-opened the copy, not the provider",
-            engines.log.count { it.startsWith("exo:") } >= 2 && engines.log.last { it.startsWith("exo:") }.let {
-                TimeshiftServer.isLocal(it.removePrefix("exo:"))
-            },
-        )
     }
 
     @Test
@@ -260,7 +253,7 @@ class LiveTuneControllerTimeshiftTest {
         engines.exoWatch!!.complete("played, then stalled for 15s without recovering")
         awaitLog(engines) { log -> log.any { it.startsWith("mpv:") } }
         assertTrue("the ladder still hands over: ${engines.log}", engines.log.any { it.startsWith("mpv:") })
-        assertTrue(engines.log.none { it.contains("the feed stopped, not the engine") })
+        assertEquals("one ExoPlayer load only — no rewind", 1, engines.log.count { it.startsWith("exo:") })
     }
 
     /** Reads the copy at [url] as a player would: without a reader a copy parks itself after 4 s and stops saving. */
