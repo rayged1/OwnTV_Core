@@ -6329,7 +6329,7 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — giving up: $detail
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has ${ahead}ms ahead of the playhead — the feed stopped, not the engine;
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved (${ahead} ms ahead) but not rewinding: $declined
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved ($ahead ms ahead) but not rewinding: $declined
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the copy is closed
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	not playing the copy
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the engine reports no media
