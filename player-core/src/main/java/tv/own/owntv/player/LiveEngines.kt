@@ -90,7 +90,7 @@ interface LiveEngines {
      */
     var starvedStallHook: ((String) -> Boolean)?
         get() = null
-        set(@Suppress("UNUSED_PARAMETER") value) {
+        set(value) {
             // Nothing to install on an engine that has no hook.
         }
 
