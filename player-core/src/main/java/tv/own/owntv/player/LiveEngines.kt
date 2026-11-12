@@ -88,7 +88,11 @@ interface LiveEngines {
      * Asked, before the engine reconnects a stalled stream, whether the saved copy can be rewound
      * instead. Answers true when it did; null/unset means "never mind", and the reconnect runs.
      */
-    var starvedStallHook: ((String) -> Boolean)? get() = null set(_) {}
+    var starvedStallHook: ((String) -> Boolean)?
+        get() = null
+        set(@Suppress("UNUSED_PARAMETER") value) {
+            // Nothing to install on an engine that has no hook.
+        }
 
     /** Whether mpv holds a stream (full-screen live, a film, a catch-up). */
     val mpvHasStream: Boolean
