@@ -769,7 +769,21 @@ class LivePreviewEngine(
     }
     /** Scope for the reconnect URL-provider (awaiting its suspend freshUrl() off-main, then reloading on main). */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val stallWatchdog = Runnable { reconnect("buffering stalled") }
+    /**
+     * Called instead of [reconnect] when a stalled stream has run out of its saved copy, and answers
+     * whether it dealt with it (by rewinding the copy) — see [LiveTuneController]'s starved branch.
+     *
+     * The ladder that owns that rewind only runs when the engine gives a stream up, so a plain
+     * buffering stall — the commonest failure on a cell hand-over — never reached it: measured
+     * 2026-11-12, six stalls of 12.0/14.6/4.3/2.9/3.4/8.7 s with 40–80 ms buffered ahead, and not
+     * one rewind. Returning false leaves the old reconnect path exactly as it was.
+     */
+    var starvedStallHook: ((String) -> Boolean)? = null
+
+    private val stallWatchdog = Runnable {
+        if (starvedStallHook?.invoke("buffering stalled") == true) return@Runnable
+        reconnect("buffering stalled")
+    }
     // A STATE_READY on its own is not recovery — a feed that flaps READY→stall→READY every few seconds
     // used to zero tune.retryCount on each blip, so the ladder never advanced and never gave up. The count is
     // only cleared once playback has held for [HEALTHY_MS]; any reconnect cancels this.
@@ -1286,8 +1300,14 @@ class LivePreviewEngine(
                         // Sample why it stalled, now — see [Tune.stallAheadMs]. Re-priming later erases it.
                         if (_stalledSinceMs.value == null) tune.stallAheadMs = bufferedAheadMs
                         if (_stalledSinceMs.value == null) _stalledSinceMs.value = android.os.SystemClock.elapsedRealtime()
-                        LiveDiagnosticsLog.event("stallWatchdog armed (${STALL_MS}ms)")
-                        mainHandler.removeCallbacks(stallWatchdog); mainHandler.postDelayed(stallWatchdog, STALL_MS)
+                        // A dry playhead on a saved copy is not going to refill itself: the ring's tail
+                        // is the live edge, and waiting [STALL_MS] only lengthens the freeze (measured:
+                        // 12 s of black before the rewind could even be asked). Ask sooner when
+                        // something is listening; an ordinary stall keeps the full wait.
+                        val starved = bufferedAheadMs in 0..STARVED_WATCHDOG_AHEAD_MS && starvedStallHook != null
+                        val waitMs = if (starved) STALL_STARVED_MS else STALL_MS
+                        LiveDiagnosticsLog.event("stallWatchdog armed (${waitMs}ms)")
+                        mainHandler.removeCallbacks(stallWatchdog); mainHandler.postDelayed(stallWatchdog, waitMs)
                         // …and the watchdog above can only fire if this state LASTS. A stream that bounces
                         // straight back to READY re-arms it forever instead — see [noteRebufferFlap].
                         if (!tune.reconnectPending) noteRebufferFlap()
@@ -3841,6 +3861,10 @@ class LivePreviewEngine(
         private const val DECODER_REBUILD_DELAY_MS = 500L
 
         private const val STALL_MS = 12_000L        // buffering this long after playing == a dropped feed
+        /** The same wait when the saved copy is already dry: nothing can refill it, so ask at once. */
+        private const val STALL_STARVED_MS = 3_000L
+        /** Buffered ahead below which a stall counts as dry — the controller's own [STARVED_AHEAD_MS]. */
+        private const val STARVED_WATCHDOG_AHEAD_MS = 750L
         private const val PROGRESS_CHECK_MS = 2_500L // poll interval for the silent-freeze watchdog
         private const val FROZEN_LIMIT = 3          // picture frozen this many polls (~7.5s) == a dropped feed
         private const val FREEZE_TIMEOUT_MS = 8_000L // zero forward progress this long while READY == dead feed

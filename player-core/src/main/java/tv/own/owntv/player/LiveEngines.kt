@@ -84,6 +84,12 @@ interface LiveEngines {
      */
     val exoBufferedAheadAtStallMs: Long get() = -1L
 
+    /**
+     * Asked, before the engine reconnects a stalled stream, whether the saved copy can be rewound
+     * instead. Answers true when it did; null/unset means "never mind", and the reconnect runs.
+     */
+    var starvedStallHook: ((String) -> Boolean)? get() = null set(_) {}
+
     /** Whether mpv holds a stream (full-screen live, a film, a catch-up). */
     val mpvHasStream: Boolean
 
@@ -148,6 +154,9 @@ class EnginePair(private val exo: LivePreviewEngine, private val mpv: OwnTVPlaye
     override val exoHasPlayed: Boolean get() = exo.hasPlayedThisTune
     override val exoBufferedAheadMs: Long get() = exo.bufferedAheadMs
     override val exoBufferedAheadAtStallMs: Long get() = exo.bufferedAheadAtStallMs
+    override var starvedStallHook: ((String) -> Boolean)?
+        get() = exo.starvedStallHook
+        set(value) { exo.starvedStallHook = value }
     override val mpvHasStream: Boolean get() = mpv.hasActiveStream
 
     override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) = exo.play(url, muted, request)

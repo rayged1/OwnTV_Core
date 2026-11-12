@@ -381,6 +381,7 @@ class LiveTuneController(
 
     /** Stop everything: both engines, every watcher. */
     fun stop() {
+        engines.starvedStallHook = null
         cancelTune()
         releaseForArchive()
         engines.mpvStop()
@@ -543,6 +544,8 @@ class LiveTuneController(
         // copy's own playable edge, which is where a starved playhead was sitting anyway.
         val watching = timeshiftWatchingWallMs() ?: session?.playableEdgeWallMs()
         val piece = watching?.let { at -> session?.pieceAt(at - STARVED_REWIND_MS) }
+        val edge = session?.playableEdgeWallMs()
+        val behind = if (watching != null && edge != null) edge - watching else -1L
         val declined = when {
             session == null -> "the copy is closed"
             !local -> "not playing the copy"
@@ -557,14 +560,15 @@ class LiveTuneController(
         if (declined != null) {
             // Only near the starved signature: this is the line that says why a stall was not rewound.
             if (local && ahead in 0..STARVED_LOG_MS) {
-                engineLog("'${channel.name}' is starved ($ahead ms ahead) but not rewinding: $declined")
+                engineLog("'${channel.name}' is starved ($ahead ms ahead, ${behind}ms behind live) but not rewinding: $declined")
             }
             return false
         }
         starvedRewinds++
         tsFromIndex = piece
         engineLog(
-            "'${channel.name}' has ${ahead}ms ahead of the playhead — the feed stopped, not the engine; " +
+            "'${channel.name}' has ${ahead}ms ahead of the playhead and is ${behind}ms behind live — the feed " +
+                "stopped, not the engine; " +
                 "rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)",
         )
         // Detached: re-opening the copy re-arms the watchers, and the watcher that called this would
@@ -778,6 +782,11 @@ class LiveTuneController(
 
     private fun watchExo(channel: ChannelEntity, source: SourceEntity?) {
         exoWatchJob?.cancel()
+        // A stall never reaches [advance] — the engine reconnects it itself — so the rewind has to be
+        // offered from the engine's own watchdog. See [LivePreviewEngine.starvedStallHook].
+        engines.starvedStallHook = { reason ->
+            isStillExo(channel) && rewindStarvedCopy(channel, source, reason)
+        }
         exoWatchJob = scope.launch {
             engines.watchExo(
                 channelName = channel.name,
