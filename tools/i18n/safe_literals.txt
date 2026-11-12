@@ -6146,7 +6146,7 @@
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	avc
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	buffer stopped growing at ${buffered}ms
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	buffered but never started playing ($detail)
-1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	buffering stalled
+2	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	buffering stalled
 1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	building tunneled player (N19)
 1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	connection pool evict failed: ${it.javaClass.simpleName}
 1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	critical memory pressure — next tune rebuilds with the low-RAM buffer
@@ -6276,7 +6276,7 @@
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	software
 1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	software decoder for ${format.height}p while software decoding above 1080p is off — failing the load
 1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	software decoding above 1080p is off
-1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	stallWatchdog armed (${STALL_MS}ms)
+1	log	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	stallWatchdog armed (${waitMs}ms)
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	state_changed state=$name playWhenReady=${p?.playWhenReady} isPlaying=${p?.isPlaying}
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	still ${buffered}ms after ${waitedMs}ms
 1	technical	player-core/src/main/java/tv/own/owntv/player/LivePreviewEngine.kt	stop() — intentional
@@ -6325,19 +6325,10 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	$reason — gave up after ${armedBudgetMs / 1000}s
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	${channel.sourceId}:${channel.id}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' falling back to $label ($reason)
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has ${ahead}ms ahead of the playhead and is ${behind}ms behind live — the feed
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved ($ahead ms ahead, ${behind}ms behind live) but not rewinding: $declined
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' opened on mpv
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — giving up: $detail
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has ${ahead}ms ahead of the playhead — the feed stopped, not the engine;
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved ($ahead ms ahead) but not rewinding: $declined
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the copy is closed
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	not playing the copy
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the engine reports no media
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	still ${ahead}ms ahead
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	already rewound $starvedRewinds times
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no playhead position
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	nothing saved ${STARVED_REWIND_MS / 1000}s back
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	already at that piece
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — its ExoPlayer preview had already failed; trying the next engine
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — its saved copy lost the connection ($why); opening it again
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — no fallback left ($detail)
@@ -6347,6 +6338,8 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${pane.first.name}' — the pane's saved copy lost the connection ($why); previewing it directly
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	ExoPlayer
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	LiveEngine
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	already at that piece
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	already rewound $starvedRewinds times
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	engine toggle '${channel.name}' -> ${if (goToMpv) "mpv" else "exoplayer"}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	engine: $message
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	exoplayer
@@ -6355,10 +6348,18 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv handoff for '${channel.name}' abandoned — the channel changed while ExoPlayer released
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv never opened it (${MPV_OPEN_TIMEOUT_MS / 1000}s, no picture and no error)
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no picture within ${armedBudgetMs / 1000}s of tuning
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no playhead position
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	not playing the copy
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	nothing saved ${STARVED_REWIND_MS / 1000}s back
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	stalker reconnect re-resolve failed '${channel.name}'
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	stalker resolve failed
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	starting mpv for '${channel.name}' — reason=$reason
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	still ${ahead}ms ahead
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	stopped, not the engine;
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the ExoPlayer preview had already failed
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the copy is closed
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the engine reports no media
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' cannot be saved — playing it directly
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' plays from its saved copy
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	tune '${channel.name}' -> ${route.why} [${route.preference.name}]
