@@ -6329,6 +6329,7 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has held ${CATCH_UP_AFTER_MS / 1000}s at ${behind / 1000}s behind live — rejoining ${CATCH_UP_KEEP_MS / 1000}s behind the edge
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved ($ahead ms ahead, ${behind}ms behind live) but not rewinding: $declined
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' opened on mpv
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' stayed starved — the saved copy has nothing older
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — giving up: $detail
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — its ExoPlayer preview had already failed; trying the next engine
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — its saved copy lost the connection ($why); opening it again
@@ -6363,6 +6364,7 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the engine reports no media
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' cannot be saved — playing it directly
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' plays from its saved copy
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	to replay and mpv reads the same copy; leaving ExoPlayer to reconnect
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	tune '${channel.name}' -> ${route.why} [${route.preference.name}]
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	user chose compatibility mode
 1	log	player-core/src/main/java/tv/own/owntv/player/LogRepeats.kt	(repeated ×$held more)

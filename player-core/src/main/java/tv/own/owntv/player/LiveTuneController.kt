@@ -548,6 +548,12 @@ class LiveTuneController(
         // copy's own playable edge, which is where a starved playhead was sitting anyway.
         val watching = timeshiftWatchingWallMs() ?: session?.playableEdgeWallMs()
         val piece = watching?.let { at -> session?.pieceAt(at - STARVED_REWIND_MS) }
+        // Re-opening the piece already on screen is not automatically a no-op: it restarts at that
+        // piece's start, which is a real rewind once the playhead has moved on from there. Measured at a
+        // cell hand-off — the first rewind lands on the copy's oldest piece, the feed stays dead, and
+        // 20 s later "20 s back" is that same piece — so the guard declined the only move left to make.
+        val pieceStart = piece?.let { session?.wallStartOf(it) }
+        val pieceGainMs = if (watching != null && pieceStart != null) watching - pieceStart else 0L
         val edge = session?.playableEdgeWallMs()
         val behind = if (watching != null && edge != null) edge - watching else -1L
         val declined = when {
@@ -558,7 +564,7 @@ class LiveTuneController(
             starvedRewinds >= MAX_STARVED_REWINDS -> "already rewound $starvedRewinds times"
             watching == null -> "no playhead position"
             piece == null -> "nothing saved ${STARVED_REWIND_MS / 1000}s back"
-            piece == tsFromIndex -> "already at that piece"
+            piece == tsFromIndex && pieceGainMs < STARVED_REWIND_MIN_GAIN_MS -> "already at that piece"
             else -> null
         }
         if (declined != null) {
@@ -580,6 +586,28 @@ class LiveTuneController(
         scope.launch { startOnExo(channel, source) }
         scheduleCatchUp(channel)
         return true
+    }
+
+    /**
+     * The saved copy has nothing older left to replay from where the picture is sitting.
+     *
+     * Both engines read this ring through the same loopback address, so a hand-off here cannot produce a
+     * byte the ring does not have; it only costs the black screen of the swap. Measured at a cell
+     * hand-off: ExoPlayer was refused a rewind ("already at that piece"), the ladder handed over 15 s
+     * later, and mpv opened the very same piece — it looked like a rescue only because the feed returned
+     * at that moment.
+     */
+    private fun copyHasNothingOlder(): Boolean {
+        val session = ts?.takeIf { !it.isClosed } ?: return false
+        if (!TimeshiftServer.isLocal(engines.exoUrl)) return false
+        // Only the starved signature: a stall with picture still buffered ahead is the ladder's business.
+        val ahead = engines.exoBufferedAheadAtStallMs.takeIf { it >= 0L } ?: engines.exoBufferedAheadMs
+        if (ahead > STARVED_AHEAD_MS) return false
+        val watching = timeshiftWatchingWallMs() ?: session.playableEdgeWallMs() ?: return false
+        val piece = session.pieceAt(watching - STARVED_REWIND_MS) ?: return false
+        if (piece != tsFromIndex) return false
+        val start = session.wallStartOf(piece) ?: return false
+        return watching - start < STARVED_REWIND_MIN_GAIN_MS
     }
 
     /**
@@ -826,8 +854,19 @@ class LiveTuneController(
                 // A watchdog outlives the tune that armed it; firing after that would stop a stream
                 // nobody complained about.
                 stillOurs = { isStillExo(channel) },
-                // Into the ladder rather than straight to mpv: the ladder decides what "next" means.
-                handOver = { reason -> advance(channel, source, reason) },
+                // Into the ladder rather than straight to mpv: the ladder decides what "next" means —
+                // except when the ring is dry and the engine is still reconnecting, where the next rung
+                // reads the same drained copy and only costs the swap's black screen.
+                handOver = { reason ->
+                    if (engines.exoStillReconnecting && copyHasNothingOlder()) {
+                        engineLog(
+                            "'${channel.name}' stayed starved — the saved copy has nothing older " +
+                                "to replay and mpv reads the same copy; leaving ExoPlayer to reconnect",
+                        )
+                    } else {
+                        advance(channel, source, reason)
+                    }
+                },
                 onOpened = ::standDownAlarm,
                 // A provider back-off is a wait OwnTV agreed to; it is not charged to the budget.
                 postponeDeadline = { ladder.postponeDeadline(it) },
@@ -1168,6 +1207,13 @@ class LiveTuneController(
 
         /** How far back a starved copy is re-opened. Twenty seconds of picture per attempt. */
         const val STARVED_REWIND_MS = 20_000L
+
+        /**
+         * Re-opening the piece that is already on screen only counts as a rewind if that would move the
+         * picture back at least this far. Below it the seek buys nothing and an immediate re-stall would
+         * turn the recovery into a seek loop.
+         */
+        const val STARVED_REWIND_MIN_GAIN_MS = 4_000L
 
         /**
          * A stall this close to dry is worth a log line either way: it is the only place that says why a
