@@ -6326,6 +6326,7 @@
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	${channel.sourceId}:${channel.id}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' falling back to $label ($reason)
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has ${ahead}ms ahead of the playhead and is ${behind}ms behind live — the feed
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' has held ${CATCH_UP_AFTER_MS / 1000}s at ${behind / 1000}s behind live — rejoining ${CATCH_UP_KEEP_MS / 1000}s behind the edge
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' is starved ($ahead ms ahead, ${behind}ms behind live) but not rewinding: $declined
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' opened on mpv
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — giving up: $detail

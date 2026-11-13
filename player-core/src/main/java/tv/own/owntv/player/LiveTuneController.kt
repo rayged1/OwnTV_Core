@@ -161,6 +161,9 @@ class LiveTuneController(
     /** How many times this tune has rewound its saved copy because the feed ran dry. */
     private var starvedRewinds = 0
 
+    /** A rewind that worked, waiting to see whether the link holds before rejoining the live edge. */
+    private var catchUpJob: Job? = null
+
     private var tuneJob: Job? = null
     private var previewJob: Job? = null
     private var exoResolveJob: Job? = null
@@ -382,6 +385,7 @@ class LiveTuneController(
     /** Stop everything: both engines, every watcher. */
     fun stop() {
         engines.starvedStallHook = null
+        catchUpJob?.cancel()
         cancelTune()
         releaseForArchive()
         engines.mpvStop()
@@ -574,7 +578,36 @@ class LiveTuneController(
         // Detached: re-opening the copy re-arms the watchers, and the watcher that called this would
         // cancel itself at its first suspension point.
         scope.launch { startOnExo(channel, source) }
+        scheduleCatchUp(channel)
         return true
+    }
+
+    /**
+     * Walk a rewound picture back toward the live edge once the link has proved it holds.
+     *
+     * A rewind always lands [STARVED_REWIND_MS] back and playback there runs at 1x, so one hand-off
+     * leaves the channel permanently behind the broadcast — measured on a commute, `behind live` read
+     * 2.5 s, then 4.1 s, then 29.4 s for the rest of the drive, because nothing ever seeks forward.
+     * Wait [CATCH_UP_AFTER_MS] of steady playback first: a link that is still flapping must not be
+     * thrown back to the edge, where there is no read-ahead at all. Then re-open [CATCH_UP_KEEP_MS]
+     * behind the edge, which wipes out the accumulated delay and still leaves a cushion.
+     *
+     * One attempt per starved rewind, so a bad stretch cannot become a seek loop.
+     */
+    private fun scheduleCatchUp(channel: ChannelEntity) {
+        catchUpJob?.cancel()
+        catchUpJob = scope.launch {
+            delay(CATCH_UP_AFTER_MS)
+            if (!isStillExo(channel)) return@launch
+            val session = ts?.takeIf { !it.isClosed } ?: return@launch
+            if (engines.exoBufferedAheadMs < CATCH_UP_MIN_AHEAD_MS) return@launch
+            val watching = timeshiftWatchingWallMs() ?: return@launch
+            val edge = session.playableEdgeWallMs() ?: return@launch
+            val behind = edge - watching
+            if (behind <= CATCH_UP_BEHIND_MS) return@launch
+            engineLog("'${channel.name}' has held ${CATCH_UP_AFTER_MS / 1000}s at ${behind / 1000}s behind live — rejoining ${CATCH_UP_KEEP_MS / 1000}s behind the edge")
+            seekTimeshift(edge - CATCH_UP_KEEP_MS)
+        }
     }
 
     /**
@@ -1147,5 +1180,17 @@ class LiveTuneController(
          * about two minutes of cover, after which the ladder and its budget are back in charge.
          */
         const val MAX_STARVED_REWINDS = 6
+
+        /** How long a rewound picture must hold before it is walked back toward the live edge. */
+        const val CATCH_UP_AFTER_MS = 30_000L
+
+        /** Leave this much picture between the rejoined playhead and the live edge. */
+        const val CATCH_UP_KEEP_MS = 8_000L
+
+        /** No point rejoining for a delay this small. */
+        const val CATCH_UP_BEHIND_MS = 10_000L
+
+        /** Only rejoin when the copy has refilled; a thin buffer is the stall's own signature. */
+        const val CATCH_UP_MIN_AHEAD_MS = 6_000L
     }
 }
