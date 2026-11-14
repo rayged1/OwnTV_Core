@@ -19,7 +19,7 @@
 # category protocol: Stable protocol or comparison identifier.
 # category technical: Reviewed non-user-facing technical literal.
 
-2	empty	core/src/main/java/tv/own/owntv/core/CoreBuildInfo.kt	\0
+3	technical	core/src/main/java/tv/own/owntv/core/CoreBuildInfo.kt	\0
 1	technical	core/src/main/java/tv/own/owntv/core/CoreBuildInfo.kt	ahXN00/OwnTV
 1	log	core/src/main/java/tv/own/owntv/core/CorePerf.kt	OwnTVPerf
 3	technical	core/src/main/java/tv/own/owntv/core/backup/BackupContainer.kt	..
@@ -5691,9 +5691,10 @@
 1	technical	core/src/main/java/tv/own/owntv/core/ui/stage/StageGlyph.kt	M9.5 2.5H14.5A2.5 2.5 0 0 1 17 5V19A2.5 2.5 0 0 1 14.5 21.5H9.5A2.5 2.5 0 0 1 7 19V5A2.5 2.5 0 0 1 9.5 2.5zM11 18.5h2
 1	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	.apk
 1	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	Accept
-2	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	OwnTV
+3	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	OwnTV
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	UpdateManager
-2	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	User-Agent
+3	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	User-Agent
+1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	apkUrl
 1	mime	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	application/vnd.github+json
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	assets
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	body
@@ -5702,6 +5703,7 @@
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install cancelled by user
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install refused status=$status message=$message
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	name
+1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	notes
 1	file-path	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	owntv-update
 1	file-path	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	owntv-update.apk
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	tag_name
@@ -5713,6 +5715,8 @@
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	update installed
 1	file-path	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	updates
 1	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	v
+1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	version
+2	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	versionCode
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	wrong package ${info.packageName}
 2	technical	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	x86_64
 1	technical	core/src/main/java/tv/own/owntv/core/util/CrashRecorder.kt	Crashed $stamp on thread "${thread.name}"
