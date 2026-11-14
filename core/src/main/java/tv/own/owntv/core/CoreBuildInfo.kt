@@ -75,4 +75,17 @@ object CoreBuildInfo {
      * marker, which both repositories' release names carry.
      */
     var releaseRepo: String = "ahXN00/OwnTV"
+
+    /**
+     * A direct URL to a version manifest, served outside GitHub. When this is set,
+     * [tv.own.owntv.core.update.UpdateManager] reads *this* instead of asking [releaseRepo]'s
+     * releases: the manifest is a small JSON object — `version`, `versionCode`, `apkUrl`, `notes` —
+     * and [versionCode] decides whether an update is offered, because a name compare cannot order
+     * letter-suffixed versions (the fork's television scheme, `1.5p` against `1.5q`, is all zeros
+     * past the dot). This is how the fork's apps ask dl.rayge.xyz, which only the fork's links know -
+     * GitHub would otherwise offer the original app's APK, a different signature, after a download.
+     *
+     * Blank keeps the GitHub behaviour; both blank (`releaseRepo = ""`) disables the updater.
+     */
+    var updateManifestUrl: String = ""
 }

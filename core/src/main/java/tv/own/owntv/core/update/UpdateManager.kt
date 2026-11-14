@@ -24,9 +24,13 @@ import java.io.File
 import java.io.IOException
 
 /**
- * In-app updates straight from GitHub Releases: checks the repo's latest release, compares its tag
- * with the installed version, downloads the release APK, and hands it to the system installer.
- * No server of our own — each app's releases CI already publishes one APK per ABI flavour per tag
+ * In-app updates straight from GitHub Releases — or, for forks that serve them elsewhere, from a
+ * small version manifest at a URL of the app's choosing. When
+ * [tv.own.owntv.core.CoreBuildInfo.updateManifestUrl] is set the check reads that JSON
+ * (`version`, `versionCode`, `apkUrl`, `notes`) and the code decides; when it is blank the check
+ * asks [tv.own.owntv.core.CoreBuildInfo.releaseRepo]'s latest GitHub release and the release *name*
+ * decides. Either way: compare versions, download the release APK, and hand it to the system
+ * installer. GitHub's releases CI already publishes one APK per ABI flavour per tag
  * (`OwnTV-vX.Y.Z.apk` / `OwnTV-x86_64-vX.Y.Z.apk` on the television, `OwnTV-Mobile-…` on the phone),
  * and the asset matching this device's ABI is chosen, so updates also work on an x86_64 emulator.
  * **Which repository is asked is the host app's to say** — see [CoreBuildInfo.releaseRepo].
@@ -36,7 +40,7 @@ class UpdateManager(
     private val client: OkHttpClient,
     private val settings: tv.own.owntv.core.settings.SettingsRepository,
 ) {
-    data class UpdateInfo(val version: String, val notes: String, val apkUrl: String)
+    data class UpdateInfo(val version: String, val notes: String, val apkUrl: String, val versionCode: Long = -1L)
 
     sealed interface Failure {
         data class CheckHttp(val code: Int) : Failure
@@ -93,51 +97,101 @@ class UpdateManager(
 
     val currentVersion: String = CoreBuildInfo.versionName
 
-    /** Queries GitHub's latest release; moves to Available / UpToDate / a semantic failure. */
+    /** Queries GitHub's latest release (or the fork's version manifest); moves to Available / UpToDate / a semantic failure. */
     fun check() {
         if (_state.value is State.Checking || _state.value is State.Downloading) return
         _state.value = State.Checking
         scope.launch {
             runCatching {
-                val request = Request.Builder()
-                    .url("https://api.github.com/repos/${CoreBuildInfo.releaseRepo}/releases/latest")
-                    .header("Accept", "application/vnd.github+json")
-                    .header("User-Agent", "OwnTV")
-                    .build()
-                client.newCall(request).execute().use { resp ->
-                    if (!resp.isSuccessful) throw CheckHttpException(resp.code)
-                    val body = resp.body.string()
-                    if (body.isBlank()) throw InvalidReleaseResponseException()
-                    val o = runCatching { JSONObject(body) }.getOrElse { throw InvalidReleaseResponseException() }
-                    val version = o.optString("tag_name").removePrefix("v").takeIf { it.isNotBlank() }
-                        ?: throw InvalidReleaseResponseException()
-                    val notes = o.optString("body").take(16_000)
-                    val assets = o.optJSONArray("assets") ?: throw InvalidReleaseResponseException()
-                    // Releases carry one APK per ABI flavor (arm = generic, x86_64 suffixed). Never
-                    // silently install an APK for the wrong ABI.
-                    val wantX86 = android.os.Build.SUPPORTED_ABIS.firstOrNull() == "x86_64"
-                    val apkUrl = (0 until assets.length())
-                        .asSequence()
-                        .mapNotNull { assets.optJSONObject(it) }
-                        .mapNotNull { asset ->
-                            val name = asset.optString("name")
-                            val url = asset.optString("browser_download_url")
-                            if (!name.endsWith(".apk") || url.isBlank()) return@mapNotNull null
-                            val isX86 = name.contains("x86_64", ignoreCase = true)
-                            if (isX86 == wantX86) url else null
-                        }
-                        .firstOrNull()
-                        ?: throw NoCompatibleApkException()
-                    val info = UpdateInfo(version, notes, apkUrl)
-                    settings.recordUpdateCheck(System.currentTimeMillis())
-                    if (isNewer(version, currentVersion)) _state.value = State.Available(info)
-                    else _state.value = State.UpToDate
+                // The fork's apps read a version manifest from dl.rayge.xyz: a private code base has
+                // no GitHub releases the app can see without shipping a token, and the original apps'
+                // releases carry a different signature — the installer refuses them after the whole
+                // download. Everything downstream (notes, download, installer session) is the same
+                // machine; only the answer's shape differs.
+                val manifestUrl = CoreBuildInfo.updateManifestUrl
+                val info: UpdateInfo = if (manifestUrl.isNotBlank()) {
+                    val request = Request.Builder()
+                        .url(manifestUrl)
+                        .header("User-Agent", "OwnTV")
+                        .build()
+                    client.newCall(request).execute().use { resp ->
+                        if (!resp.isSuccessful) throw CheckHttpException(resp.code)
+                        val body = resp.body.string()
+                        if (body.isBlank()) throw InvalidReleaseResponseException()
+                        readManifest(body)
+                    }
+                } else {
+                    val request = Request.Builder()
+                        .url("https://api.github.com/repos/${CoreBuildInfo.releaseRepo}/releases/latest")
+                        .header("Accept", "application/vnd.github+json")
+                        .header("User-Agent", "OwnTV")
+                        .build()
+                    client.newCall(request).execute().use { resp ->
+                        if (!resp.isSuccessful) throw CheckHttpException(resp.code)
+                        val body = resp.body.string()
+                        if (body.isBlank()) throw InvalidReleaseResponseException()
+                        val o = runCatching { JSONObject(body) }.getOrElse { throw InvalidReleaseResponseException() }
+                        val version = o.optString("tag_name").removePrefix("v").takeIf { it.isNotBlank() }
+                            ?: throw InvalidReleaseResponseException()
+                        val notes = o.optString("body").take(16_000)
+                        val assets = o.optJSONArray("assets") ?: throw InvalidReleaseResponseException()
+                        // Releases carry one APK per ABI flavor (arm = generic, x86_64 suffixed). Never
+                        // silently install an APK for the wrong ABI.
+                        val wantX86 = android.os.Build.SUPPORTED_ABIS.firstOrNull() == "x86_64"
+                        val apkUrl = (0 until assets.length())
+                            .asSequence()
+                            .mapNotNull { assets.optJSONObject(it) }
+                            .mapNotNull { asset ->
+                                val name = asset.optString("name")
+                                val url = asset.optString("browser_download_url")
+                                if (!name.endsWith(".apk") || url.isBlank()) return@mapNotNull null
+                                val isX86 = name.contains("x86_64", ignoreCase = true)
+                                if (isX86 == wantX86) url else null
+                            }
+                            .firstOrNull()
+                            ?: throw NoCompatibleApkException()
+                        UpdateInfo(version, notes, apkUrl)
+                    }
                 }
+                settings.recordUpdateCheck(System.currentTimeMillis())
+                if (isNewer(info)) _state.value = State.Available(info)
+                else _state.value = State.UpToDate
             }.onFailure { error ->
                 Log.w(TAG, "update check failed: ${error.message}", error)
                 _state.value = State.Failed(failureFor(error, checking = true))
             }
         }
+    }
+
+    /**
+     * Reads a manifest update answer into [UpdateInfo], without guessing. `versionCode` decides —
+     * the version *name* can't order the fork's schemes (`1.5p` and `1.5q` are numerically
+     * identical), so a manifest without a code is treated as a malformed answer. The compare uses
+     * the host app's own code, set from its `BuildConfig` at startup; when they match the APK is
+     * the one the manifest already describes.
+     */
+    private fun readManifest(body: String): UpdateInfo {
+        val o = runCatching { JSONObject(body) }.getOrElse { throw InvalidReleaseResponseException() }
+        val version = o.optString("version").takeIf { it.isNotBlank() }
+            ?: throw InvalidReleaseResponseException()
+        val apkUrl = o.optString("apkUrl").takeIf { it.isNotBlank() }
+            ?: throw InvalidReleaseResponseException()
+        val notes = o.optString("notes").take(16_000)
+        val remoteCode = if (o.has("versionCode")) o.optLong("versionCode") else -1L
+        if (remoteCode < 0) throw InvalidReleaseResponseException()
+        return UpdateInfo(version, notes, apkUrl, remoteCode)
+    }
+
+    /**
+     * Offers the update. With a manifest the [UpdateInfo.versionCode] is the truth — the version
+     * *name* cannot order the fork's schemes (`1.5p` and `1.5q` are numerically identical), while
+     * the code is exactly what the installer compares anyway. The GitHub path has only names, so it
+     * keeps the segment-wise numeric walk below.
+     */
+    private fun isNewer(info: UpdateInfo): Boolean {
+        val code = CoreBuildInfo.versionCode
+        if (code > 0 && info.versionCode > 0) return info.versionCode > code
+        return isNewerName(info.version, currentVersion)
     }
 
     /** Downloads the release APK with progress, then opens the system installer. */
@@ -289,7 +343,7 @@ class UpdateManager(
     }
 
     /** Numeric segment-wise compare: "1.10.0" > "1.9.3"; non-numeric junk compares as 0. */
-    private fun isNewer(remote: String, local: String): Boolean {
+    private fun isNewerName(remote: String, local: String): Boolean {
         val r = remote.split('.').map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
         val l = local.split('.').map { it.takeWhile(Char::isDigit).toIntOrNull() ?: 0 }
         for (i in 0 until maxOf(r.size, l.size)) {
