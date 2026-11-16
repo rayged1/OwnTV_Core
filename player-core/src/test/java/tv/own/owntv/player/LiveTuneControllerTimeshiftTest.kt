@@ -81,7 +81,10 @@ class LiveTuneControllerTimeshiftTest {
         override var exoFailed = false
         override var mpvHasStream = false
         override var exoBufferedAheadMs = -1L
+        var exoPositionMs = 0L
         var exoWatch: CompletableDeferred<String?>? = null
+
+        override fun positionMs(onExo: Boolean): Long = if (onExo) exoPositionMs else 0L
 
         override fun exoPlay(url: String, muted: Boolean, request: LiveRequest) { exoUrl = url; log += "exo:$url" }
         override fun exoSetMuted(muted: Boolean) { log += if (muted) "exo-mute" else "exo-unmute" }
@@ -277,6 +280,9 @@ class LiveTuneControllerTimeshiftTest {
             while (engines.exoWatch == null || engines.exoWatch === stallWatch) delay(50)
             while (session.playableEdgeWallMs() == null) delay(50)
         }
+        // Like the field playhead (the onn sat 21.3 s into its re-opened piece), move the position into
+        // the replayed piece, so "piece gain" looks real to the old guard — 2026-11-15's exact trap.
+        engines.exoPositionMs = 8_000L
         engines.exoBufferedAheadMs = 31L
         engines.exoWatch!!.complete("ExoPlayer gave up mid-stream: playback kept re-buffering (12 re-buffers in 771ms, position advanced 0ms)")
         awaitLog(engines) { log -> log.count { it.startsWith("exo:") } >= 3 }
