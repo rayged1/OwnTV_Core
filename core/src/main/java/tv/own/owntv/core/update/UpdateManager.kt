@@ -68,6 +68,9 @@ class UpdateManager(
         data object UpToDate : State
         data class Available(val info: UpdateInfo) : State
         data class Downloading(val percent: Int) : State
+
+        /** The session is in and the system is holding it for the user's OK — waiting on their tap. */
+        data object AwaitingUserAction : State
         data class Failed(val failure: Failure, val retryInfo: UpdateInfo? = null) : State
     }
 
@@ -309,18 +312,63 @@ class UpdateManager(
                 // The user still has to approve the install — this is the system prompt, not a failure.
                 PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                     val confirm = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
-                    confirm?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    runCatching { confirm?.let { context.startActivity(it) } }
-                        .onFailure { _state.value = State.Failed(Failure.Install) }
+                    if (confirm == null) {
+                        // The session is committed but there is no prompt activity to open. Without
+                        // this branch the state machine stayed on the download bar at 100% forever
+                        // (measured 2026-11-16 on an S22: "hangs on pending"). Fail so Retry can run
+                        // the whole flow again — by then the unknown-sources grant is usually in.
+                        Log.w(TAG, "install pending but the system gave no prompt intent")
+                        pendingConfirmIntent = null
+                        _state.value = State.Failed(Failure.Install)
+                        return
+                    }
+                    confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    pendingConfirmIntent = confirm
+                    runCatching { context.startActivity(confirm) }
+                        .onSuccess { _state.value = State.AwaitingUserAction }
+                        .onFailure { e ->
+                            Log.w(TAG, "install prompt could not be shown: $e")
+                            pendingConfirmIntent = null
+                            _state.value = State.Failed(Failure.Install)
+                        }
                 }
-                PackageInstaller.STATUS_SUCCESS -> Log.i(TAG, "update installed")
+                PackageInstaller.STATUS_SUCCESS -> {
+                    Log.i(TAG, "update installed"); pendingConfirmIntent = null
+                }
                 // Declining the system prompt is a choice, not an error — leave the dialog as it was.
-                PackageInstaller.STATUS_FAILURE_ABORTED -> Log.i(TAG, "install cancelled by user")
+                PackageInstaller.STATUS_FAILURE_ABORTED -> {
+                    Log.i(TAG, "install cancelled by user")
+                    pendingConfirmIntent = null
+                }
                 else -> {
                     Log.w(TAG, "install refused status=$status message=$message")
+                    pendingConfirmIntent = null
                     _state.value = State.Failed(Failure.InstallRejected(message?.takeIf { it.isNotBlank() }))
                 }
             }
+        }
+    }
+
+    private var pendingConfirmIntent: Intent? = null
+
+    /**
+     * Re-launches the system install prompt for a session still waiting on the user's OK (the
+     * [State.AwaitingUserAction] state). The prompt activity can be missed — backgrounded behind a
+     * lock screen, dismissed by a stray back press — and the session then sits committed forever;
+     * the button that lands here is its second chance. A stale prompt that refuses to open fails
+     * the install instead of hanging, so the sheet's Retry can rerun the whole flow cleanly.
+     */
+    fun reopenPrompt() {
+        if (_state.value !is State.AwaitingUserAction) return
+        val confirm = pendingConfirmIntent ?: run {
+            pendingConfirmIntent = null
+            _state.value = State.Failed(Failure.Install)
+            return
+        }
+        runCatching { context.startActivity(confirm) }.onFailure { e ->
+            Log.w(TAG, "install prompt could not be reopened: $e")
+            pendingConfirmIntent = null
+            _state.value = State.Failed(Failure.Install)
         }
     }
 
@@ -339,6 +387,7 @@ class UpdateManager(
     }
 
     fun reset() {
+        pendingConfirmIntent = null
         if (_state.value !is State.Downloading) _state.value = State.Idle
     }
 

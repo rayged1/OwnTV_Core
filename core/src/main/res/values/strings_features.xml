@@ -278,6 +278,8 @@
     <string name="update_available_version">Version <xliff:g id="available">%1$s</xliff:g> is available (you have v<xliff:g id="current">%2$s</xliff:g>).</string>
     <!-- Translators: Informational text in the update dialog after download completes. -->
     <string name="update_installer">The system installer opens when the download finishes.</string>
+    <string name="update_waiting_confirm">The system is holding the install for your OK. If its prompt didn\'t appear, raise it here.</string>
+    <string name="update_open_prompt">Open the prompt</string>
     <!-- Translators: Button in the update dialog to postpone the update. -->
     <string name="update_later">Later</string>
     <!-- Translators: Primary button in the update dialog to start the update immediately. -->

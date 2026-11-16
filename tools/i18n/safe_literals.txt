@@ -5701,6 +5701,9 @@
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	browser_download_url
 1	url	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	https://api.github.com/repos/${CoreBuildInfo.releaseRepo}/releases/latest
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install cancelled by user
+1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install pending but the system gave no prompt intent
+1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install prompt could not be reopened: $e
+1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install prompt could not be shown: $e
 1	log	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	install refused status=$status message=$message
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	name
 1	json	core/src/main/java/tv/own/owntv/core/update/UpdateManager.kt	notes
