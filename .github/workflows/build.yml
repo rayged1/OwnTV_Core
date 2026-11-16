@@ -86,6 +86,7 @@ jobs:
         if: always()   # the reports matter most when a step above failed
         uses: actions/upload-artifact@v7
         with:
+          retention-days: 1
           name: check-reports
           path: |
             core/build/reports/tests/**
