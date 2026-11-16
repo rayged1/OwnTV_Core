@@ -161,6 +161,13 @@ class LiveTuneController(
     /** How many times this tune has rewound its saved copy because the feed ran dry. */
     private var starvedRewinds = 0
 
+    /** The piece this tune's last accepted starved rewind re-opened. Accepting the same piece twice in
+     *  a row is a replay loop, not a recovery: the copy only holds what it holds, so a second rewind
+     *  onto the same piece re-plays bytes the playhead has already watched. Measured 2026-11-15 (onn,
+     *  NBC 4 NY): one dead piece handed back three times in 48 s, each replay dying at the same 21.3 s
+     *  wall, until the user pressed Live. */
+    private var lastRewindPiece: Long? = null
+
     /** A rewind that worked, waiting to see whether the link holds before rejoining the live edge. */
     private var catchUpJob: Job? = null
 
@@ -565,7 +572,22 @@ class LiveTuneController(
             watching == null -> "no playhead position"
             piece == null -> "nothing saved ${STARVED_REWIND_MS / 1000}s back"
             piece == tsFromIndex && pieceGainMs < STARVED_REWIND_MIN_GAIN_MS -> "already at that piece"
+            piece == lastRewindPiece -> REWIND_REPLAY_DECLINE
             else -> null
+        }
+        if (declined == REWIND_REPLAY_DECLINE && session != null) {
+            // The give-up ladder wants the piece the last rewind already re-opened, and a rewind can
+            // only replay the ring that is already there — there are no new bytes behind the playhead.
+            // Jump to the live edge instead: the same address the HUD's Live button opens
+            // (urlFor(session, null) = /live.ts), which startOnExo plays once tsFromIndex is null.
+            engineLog(
+                "'${channel.name}' — the saved copy is drained at piece $piece (${behind}ms behind live): " +
+                    "the last rewind already replayed it; opening the live feed",
+            )
+            lastRewindPiece = null
+            tsFromIndex = null
+            scope.launch { startOnExo(channel, source) }
+            return true
         }
         if (declined != null) {
             // Only near the starved signature: this is the line that says why a stall was not rewound.
@@ -575,6 +597,7 @@ class LiveTuneController(
             return false
         }
         starvedRewinds++
+        lastRewindPiece = piece
         tsFromIndex = piece
         engineLog(
             "'${channel.name}' has ${ahead}ms ahead of the playhead and is ${behind}ms behind live — the feed " +
@@ -899,6 +922,7 @@ class LiveTuneController(
     private suspend fun arm(channel: ChannelEntity, source: SourceEntity?, preference: EnginePreference) {
         forceTsFor = null
         starvedRewinds = 0
+        lastRewindPiece = null
         val secs = SourceOverrides.liveTuneTimeoutSecsOf(source) ?: host.globalBudgetSecs()
         armedBudgetMs = if (secs <= 0) LiveLadder.NO_BUDGET else secs * 1000L
         ladder.arm(channel.streamUrl, preference, budgetMs = armedBudgetMs, nowMs = host.nowMs()) {
@@ -1214,6 +1238,10 @@ class LiveTuneController(
          * turn the recovery into a seek loop.
          */
         const val STARVED_REWIND_MIN_GAIN_MS = 4_000L
+
+        /** The [rewindStarvedCopy] decline that means the last rewind already re-opened this piece —
+         *  accepting it again is the 2026-11-15 replay loop, so the escape is the live edge instead. */
+        private const val REWIND_REPLAY_DECLINE = "that piece is the one the last rewind replayed"
 
         /**
          * A stall this close to dry is worth a log line either way: it is the only place that says why a

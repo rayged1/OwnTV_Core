@@ -251,6 +251,45 @@ class LiveTuneControllerTimeshiftTest {
     }
 
     @Test
+    fun `a second give-up onto the piece the last rewind replayed opens the live feed`() = runBlocking {
+        // 2026-11-15 (onn, NBC 4 NY): the flap give-up rewound onto one dead piece three times, each
+        // replay dying at the same wall, until the user pressed Live. A rewind cannot carry new bytes —
+        // it replays the ring that is already there — so the repeat give-up must jump to the live edge.
+        val engines = Engines()
+        val c = LiveTuneController(scope, engines, Host())
+        c.tune(channel(62))
+        awaitLog(engines) { log -> log.any { it.startsWith("exo:") } }
+        readLikeAPlayer(engines.exoUrl!!)
+        val session = c.localTimeshift.value!!.session
+        withTimeoutOrNull(10_000) {
+            while (session.readingFromWallMs == null || session.pieceAt(System.currentTimeMillis()) == null) delay(50)
+        }
+        // First dry stall: the rewind lands inside the copy, as always.
+        val stallWatch = engines.exoWatch
+        engines.exoBufferedAheadMs = 31L
+        engines.exoWatch!!.complete("played, then stalled for 15s without recovering")
+        awaitLog(engines) { log -> log.count { it.startsWith("exo:") } >= 2 }
+        // The field loop only repeats on a dead feed — the ring stops growing, so every rewind targets
+        // the same dead piece. Reproduce that: the provider goes silent, then the re-opened copy dies
+        // the same way (the 12-re-buffer flap) and the ladder must NOT re-open that piece again.
+        outage = true
+        withTimeoutOrNull(10_000) {
+            while (engines.exoWatch == null || engines.exoWatch === stallWatch) delay(50)
+            while (session.playableEdgeWallMs() == null) delay(50)
+        }
+        engines.exoBufferedAheadMs = 31L
+        engines.exoWatch!!.complete("ExoPlayer gave up mid-stream: playback kept re-buffering (12 re-buffers in 771ms, position advanced 0ms)")
+        awaitLog(engines) { log -> log.count { it.startsWith("exo:") } >= 3 }
+        val urls = engines.log.filter { it.startsWith("exo:") }.map { it.removePrefix("exo:") }
+        assertTrue("the repeat give-up jumped to the live edge: $urls", urls.last().endsWith("/live.ts"))
+        assertTrue(
+            "the jump says why: ${engines.log}",
+            engines.log.any { it.contains("the last rewind already replayed it; opening the live feed") },
+        )
+        assertFalse("no mpv hand-off: ${engines.log}", engines.log.any { it.startsWith("mpv:") })
+    }
+
+    @Test
     fun `a stall with media still buffered ahead is left to the ladder`() = runBlocking {
         val engines = Engines()
         val c = LiveTuneController(scope, engines, Host())
