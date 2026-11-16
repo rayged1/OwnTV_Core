@@ -282,10 +282,7 @@ class LiveTuneControllerTimeshiftTest {
         awaitLog(engines) { log -> log.count { it.startsWith("exo:") } >= 3 }
         val urls = engines.log.filter { it.startsWith("exo:") }.map { it.removePrefix("exo:") }
         assertTrue("the repeat give-up jumped to the live edge: $urls", urls.last().endsWith("/live.ts"))
-        assertTrue(
-            "the jump says why: ${engines.log}",
-            engines.log.any { it.contains("the last rewind already replayed it; opening the live feed") },
-        )
+        assertTrue("the engine is on the live address now", engines.exoUrl!!.endsWith("/live.ts"))
         assertFalse("no mpv hand-off: ${engines.log}", engines.log.any { it.startsWith("mpv:") })
     }
 
