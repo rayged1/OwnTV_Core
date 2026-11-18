@@ -293,10 +293,19 @@ object PlaybackErrorLog {
     fun export(context: Context): String? = runCatching {
         val appContext = context.applicationContext
         val stamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+        val live = LiveDiagnosticsLog.snapshot()
+        val liveLines = live.lines().filter { it.isNotBlank() }
+        // Self-describing window: the ring's first and last stamp say WHICH session a follow-up
+        // export carries (Ray, 2026-11-17 — exports kept being mistaken for fresher than they are).
+        val covered: String? = when {
+            liveLines.isEmpty() -> null
+            else -> "Session covered: ${liveLines.first().take(8)}–${liveLines.last().take(8)} device clock"
+        }
         val text = buildString {
             appendLine("OwnTV playback report")
             appendLine("${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
             appendLine("Exported ${stamp.format(java.util.Date())}")
+            covered?.let(::appendLine)
             appendLine()
             // The crash comes first: it is the only part of this report that survives the process
             // dying, and it is the reason most people are asked to export at all.
@@ -312,7 +321,6 @@ object PlaybackErrorLog {
                 e.raw?.let { appendLine("  raw   : $it") }
                 appendLine()
             }
-            val live = LiveDiagnosticsLog.snapshot()
             if (live.isNotBlank()) {
                 appendLine("--- live diagnostics (most recent) ---")
                 appendLine(live)

@@ -6883,6 +6883,7 @@
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Provider rejected the request (HTTP 400) — bad or expired link
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Provider rejected your login (HTTP 401)
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Provider's SSL certificate is invalid or expired
+1	log	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Session covered: ${liveLines.first().take(8)}–${liveLines.last().take(8)} device clock
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Stream format not recognized (bad or partial stream)
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	Stream not found on the provider (HTTP 404)
 1	protocol	player-core/src/main/java/tv/own/owntv/player/PlaybackErrorLog.kt	This device's decoder doesn't support this video format/profile (e.g. HEVC 10-bit)
