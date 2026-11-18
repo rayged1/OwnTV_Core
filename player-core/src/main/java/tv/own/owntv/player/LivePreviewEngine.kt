@@ -2044,6 +2044,11 @@ class LivePreviewEngine(
         tune.hasVideoTrack = true
         _videoAspect.value = null; _videoSize.value = null; _streamChips.value = emptyList(); _videoFps.value = null
         _videoRes.value = null // else the next channel's HUD opens showing the previous one's resolution badge
+        // Same doctrine for the failure card: a give-up (failLoad) leaves _error latched for the error
+        // screen's Retry, and stop() is the handover between sessions. Without this clear the NEXT open
+        // composes last session's card for a beat before its own tune state lands — measured 2026-11-17:
+        // a DNS-outage give-up latched it and EVERY link open after flashed it until an app restart.
+        _error.value = null; _errorInfo.value = null
         _state.value = State.IDLE
         // Said here, not left to STATE_IDLE: a player already idle mid-reconnect raises no new state, and
         // a phone keeps its screen on while an engine reports buffering.
