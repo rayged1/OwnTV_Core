@@ -226,6 +226,39 @@ data class EpgRefresh(
     }
 }
 
+/**
+ * "Refresh everything at one time" — the daily sync window.
+ *
+ * Without it every auto-refreshing source keeps its **own** 24-hour timer, measured from whenever that
+ * source last succeeded, so two playlists and two guides refresh at four unrelated times of day and the
+ * app reads as if it is always updating (Ray, 2026-11-20). With it on, every auto-refreshing source
+ * becomes due **once a day at [hour]**, and all of them together: a source is refreshed when the most
+ * recent window has opened and that source has not succeeded since it did.
+ *
+ * A source's own interval still decides *whether* it auto-refreshes at all (OFF never does), but the
+ * window replaces the timing — the point of the setting is one visible event a day instead of four.
+ * Off by default, which is exactly the behaviour every existing build has.
+ */
+data class DailySync(val enabled: Boolean = false, val hour: Int = DEFAULT_HOUR) {
+
+    fun serialize(): String = if (enabled) "ON$SEPARATOR${hour.coerceIn(0, 23)}" else "OFF"
+
+    companion object {
+        const val DEFAULT_HOUR = 3
+        private const val SEPARATOR = ':'
+
+        val OFF = DailySync()
+
+        /** Any unrecognised value is OFF: a window nobody asked for must never start refreshing sources. */
+        fun parse(raw: String?): DailySync {
+            val value = raw?.trim().orEmpty()
+            if (value.substringBefore(SEPARATOR).uppercase() != "ON") return OFF
+            val hour = value.substringAfter(SEPARATOR, "").toIntOrNull()?.coerceIn(0, 23) ?: DEFAULT_HOUR
+            return DailySync(enabled = true, hour = hour)
+        }
+    }
+}
+
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "owntv_settings")
 
 /**
@@ -374,6 +407,7 @@ class SettingsRepository(private val context: Context, private val localeStore: 
         // REFRESH_SOURCE_IDS set is read once (see migrateLegacyRefreshFlags) then ignored.
         val PLAYLIST_AUTO_REFRESH = stringPreferencesKey("playlist_auto_refresh")
         val EPG_AUTO_REFRESH = stringPreferencesKey("epg_auto_refresh")
+        val DAILY_SYNC = stringPreferencesKey("daily_sync")
         // Per-EPG-source: use that feed's own <icon src> channel logos instead of the playlist's.
         val EPG_USE_LOGOS = stringPreferencesKey("epg_use_logos")
         val M3U_VOD_RESORT_CHECKED = booleanPreferencesKey("m3u_vod_resort_checked")
@@ -2325,6 +2359,13 @@ class SettingsRepository(private val context: Context, private val localeStore: 
                 key.toLongOrNull()?.let { it to EpgRefresh.parse(value) }
             }.toMap()
         }
+
+    /** The daily sync window ("refresh everything at one time"). Off by default. */
+    val dailySync: Flow<DailySync> = prefsFlow { prefs -> DailySync.parse(prefs[Keys.DAILY_SYNC]) }
+
+    suspend fun setDailySync(value: DailySync) {
+        context.dataStore.edit { prefs -> prefs[Keys.DAILY_SYNC] = value.serialize() }
+    }
 
     /**
      * EPG sources whose own `<icon src>` channel logos should replace the playlist's logos. Per source,

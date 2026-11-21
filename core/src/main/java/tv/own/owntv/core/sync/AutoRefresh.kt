@@ -3,6 +3,7 @@ package tv.own.owntv.core.sync
 import android.os.SystemClock
 import android.util.Log
 import androidx.work.ExistingWorkPolicy
+import java.time.ZoneId
 import kotlinx.coroutines.flow.first
 import tv.own.owntv.core.database.dao.EpgDao
 import tv.own.owntv.core.database.dao.ProfileDao
@@ -59,13 +60,19 @@ class AutoRefresh(
             }
         }
         val nowMs = System.currentTimeMillis()
+        // "Refresh everything at one time": when on, interval modes stop running on their own clocks and
+        // become due together once the day's window has opened. Read before anything is enqueued so every
+        // source in this pass is judged by the same instant.
+        val window = settings.dailySync.first()
+        val windowStart = DailySyncWindow.openStartMs(nowMs, window)
+        val windowOpen = windowStart != null
         val pid = profileDao.resolveExistingProfileId(settings.activeProfileId.first()) ?: return
         // --- Playlist sources ---
         val playlistModes = settings.playlistAutoRefresh.first()
         if (playlistModes.isNotEmpty()) {
             sourceRepository.observeSources(pid).first().forEach { source ->
                 val mode = playlistModes[source.id] ?: PlaylistRefresh.OFF
-                if (shouldRefresh(mode, source.lastSyncAt, nowMs, includeStartup)) {
+                if (shouldRefresh(mode, source.lastSyncAt, nowMs, includeStartup, windowOpen, windowStart ?: 0L)) {
                     val counts = importFinalizer.contentCounts(source.id)
                     Log.d(TAG, "checkAutoRefresh playlist sourceId=${source.id} mode=$mode — enqueuing")
                     catalogSyncScheduler.enqueueSync(
@@ -83,7 +90,7 @@ class AutoRefresh(
         if (epgModes.isNotEmpty()) {
             epgSourceStore.getAll().forEach { src ->
                 val mode = epgModes[src.id] ?: EpgRefresh.OFF
-                if (shouldRefreshEpg(mode, src.lastSyncAt, nowMs, includeStartup)) {
+                if (shouldRefreshEpg(mode, src.lastSyncAt, nowMs, includeStartup, windowOpen, windowStart ?: 0L)) {
                     val base = epgDao.countForSources(listOf(src.id))
                     Log.d(TAG, "checkAutoRefresh epg sourceId=${src.id} mode=$mode — enqueuing")
                     epgSyncScheduler.enqueueSync(
@@ -147,10 +154,19 @@ class AutoRefresh(
         lastSyncAt: Long?,
         now: Long,
         includeStartup: Boolean,
+        windowOpen: Boolean,
+        windowStart: Long,
     ): Boolean = when (refresh.mode) {
         PlaylistAutoRefresh.OFF -> false
         PlaylistAutoRefresh.STARTUP -> includeStartup
-        else -> (now - (lastSyncAt ?: 0L)) >= (refresh.thresholdMs ?: Long.MAX_VALUE)
+        else -> if (windowOpen) {
+            // The window replaces the timing, not the choice: an interval source is refreshed once the
+            // day's window has opened and it has not succeeded since. Every such source answers yes in
+            // this same pass, which is what makes it one event instead of four.
+            (lastSyncAt ?: 0L) < windowStart
+        } else {
+            (now - (lastSyncAt ?: 0L)) >= (refresh.thresholdMs ?: Long.MAX_VALUE)
+        }
     }
 
     /** EPG equivalent of [shouldRefresh]. */
@@ -159,15 +175,25 @@ class AutoRefresh(
         lastSyncAt: Long?,
         now: Long,
         includeStartup: Boolean,
+        windowOpen: Boolean,
+        windowStart: Long,
     ): Boolean = when (refresh.mode) {
         EpgAutoRefresh.OFF -> false
         EpgAutoRefresh.STARTUP -> includeStartup
         // MANUAL's threshold is its day count; every other mode carries its own. Identical shape to
         // [shouldRefresh], which is the point of the parity.
-        else -> (now - (lastSyncAt ?: 0L)) >= (refresh.thresholdMs ?: Long.MAX_VALUE)
+        else -> if (windowOpen) {
+            (lastSyncAt ?: 0L) < windowStart
+        } else {
+            (now - (lastSyncAt ?: 0L)) >= (refresh.thresholdMs ?: Long.MAX_VALUE)
+        }
     }
 
     companion object {
+        /** The window arithmetic, in [DailySyncWindow] so it is testable without the DI graph. */
+        internal fun windowStartMs(nowMs: Long, hour: Int, zone: ZoneId = ZoneId.systemDefault()): Long =
+            DailySyncWindow.startMs(nowMs, hour, zone)
+
         private const val TAG = "OwnTVHome"
         /** The work reason the sync workers recognise as automatic, and hold back during playback. */
         const val REASON = "auto_refresh"

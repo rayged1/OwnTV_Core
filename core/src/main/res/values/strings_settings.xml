@@ -1559,6 +1559,10 @@
     <!-- Translators: Description of the resync options and their effects. -->
     <string name="settings_sources_resync_description">Resync now fetches the latest catalog and keeps everything already saved.\n\nResync and remove missing titles also allows removing titles the provider no longer lists. Your favorites, history and resume positions for titles that are still listed are kept.</string>
     <!-- Translators: Auto-refresh option: off (no automatic refresh). -->
+    <!-- The daily sync window: one refresh a day instead of every source on its own 24h clock. -->
+    <string name="settings_daily_sync_title">Refresh everything at one time</string>
+    <string name="settings_daily_sync_description">Playlists and guides all refresh together once a day, at this time, instead of each one landing at its own hour.</string>
+    <string name="settings_daily_sync_hint">A source that has not synced since this time yesterday refreshes the next time the app checks after this hour. Left and right choose the hour; Off keeps every source on its own schedule.</string>
     <string name="settings_sources_refresh_off">Off</string>
     <!-- Translators: Auto-refresh option: refresh when the app starts. -->
     <string name="settings_sources_refresh_startup">Refresh at startup</string>
