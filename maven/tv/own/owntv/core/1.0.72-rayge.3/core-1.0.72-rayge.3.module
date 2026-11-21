@@ -1,0 +1,250 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "tv.own.owntv",
+    "module": "core",
+    "version": "1.0.72-rayge.3",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.sqlite",
+          "module": "sqlite",
+          "version": {
+            "requires": "2.6.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "core-1.0.72-rayge.3.aar",
+          "url": "core-1.0.72-rayge.3.aar",
+          "size": 10497848,
+          "sha512": "e9f0f2ac3a1391c4ba2868dea364487f0f6174e58ffc61be5fd83cfac086f0090927bb56b0bf127eaaa8fe06f34a821414f7c3a83503e3c10e58daf188f00c95",
+          "sha256": "ca9c9dfcfbdf39ba48bd0f6378c399816eb714469ca6e2f09264a2fc49d123f1",
+          "sha1": "70434ecc1336809275a985375c64cd8cbb8ee188",
+          "md5": "4d924649cdc8e128cbd16939185d79b8"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.core",
+          "module": "core-ktx",
+          "version": {
+            "requires": "1.19.0"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlinx",
+          "module": "kotlinx-coroutines-android",
+          "version": {
+            "requires": "1.11.0"
+          }
+        },
+        {
+          "group": "androidx.sqlite",
+          "module": "sqlite-bundled",
+          "version": {
+            "requires": "2.6.2"
+          }
+        },
+        {
+          "group": "androidx.sqlite",
+          "module": "sqlite-framework",
+          "version": {
+            "requires": "2.6.2"
+          }
+        },
+        {
+          "group": "androidx.room",
+          "module": "room-runtime",
+          "version": {
+            "requires": "2.8.5"
+          }
+        },
+        {
+          "group": "androidx.room",
+          "module": "room-ktx",
+          "version": {
+            "requires": "2.8.5"
+          }
+        },
+        {
+          "group": "androidx.room",
+          "module": "room-paging",
+          "version": {
+            "requires": "2.8.5"
+          }
+        },
+        {
+          "group": "androidx.paging",
+          "module": "paging-runtime",
+          "version": {
+            "requires": "3.5.1"
+          }
+        },
+        {
+          "group": "androidx.datastore",
+          "module": "datastore-preferences",
+          "version": {
+            "requires": "1.2.1"
+          }
+        },
+        {
+          "group": "androidx.work",
+          "module": "work-runtime-ktx",
+          "version": {
+            "requires": "2.11.2"
+          }
+        },
+        {
+          "group": "androidx.lifecycle",
+          "module": "lifecycle-process",
+          "version": {
+            "requires": "2.11.0"
+          }
+        },
+        {
+          "group": "androidx.tvprovider",
+          "module": "tvprovider",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "androidx.documentfile",
+          "module": "documentfile",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "com.squareup.okhttp3",
+          "module": "okhttp",
+          "version": {
+            "requires": "5.5.0"
+          }
+        },
+        {
+          "group": "com.google.zxing",
+          "module": "core",
+          "version": {
+            "requires": "3.5.4"
+          }
+        },
+        {
+          "group": "com.github.albfernandez",
+          "module": "juniversalchardet",
+          "version": {
+            "requires": "2.5.0"
+          }
+        },
+        {
+          "group": "io.insert-koin",
+          "module": "koin-bom",
+          "version": {
+            "requires": "4.2.2"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "io.insert-koin",
+          "module": "koin-android"
+        },
+        {
+          "group": "androidx.compose",
+          "module": "compose-bom",
+          "version": {
+            "requires": "2026.08.00"
+          },
+          "attributes": {
+            "org.gradle.category": "platform"
+          }
+        },
+        {
+          "group": "androidx.compose.runtime",
+          "module": "runtime"
+        },
+        {
+          "group": "androidx.sqlite",
+          "module": "sqlite",
+          "version": {
+            "requires": "2.6.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "2.4.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "core-1.0.72-rayge.3.aar",
+          "url": "core-1.0.72-rayge.3.aar",
+          "size": 10497848,
+          "sha512": "e9f0f2ac3a1391c4ba2868dea364487f0f6174e58ffc61be5fd83cfac086f0090927bb56b0bf127eaaa8fe06f34a821414f7c3a83503e3c10e58daf188f00c95",
+          "sha256": "ca9c9dfcfbdf39ba48bd0f6378c399816eb714469ca6e2f09264a2fc49d123f1",
+          "sha1": "70434ecc1336809275a985375c64cd8cbb8ee188",
+          "md5": "4d924649cdc8e128cbd16939185d79b8"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "core-1.0.72-rayge.3-sources.jar",
+          "url": "core-1.0.72-rayge.3-sources.jar",
+          "size": 1251266,
+          "sha512": "c29dc839d26f3b6c6f6d6703e1565871d6995ad588f95608668cddf2c73958b9de0e353e8e001fdc7a7c2e07dee924a5e13554ea31800aa9bf7493a97732888b",
+          "sha256": "b019924e90d3d058b9d0a354761a80f7c595d41077dda4dcb3a5b9021bdbef7f",
+          "sha1": "47bd0ea63f3387d7b7391885cf1c67d8b1085246",
+          "md5": "6803c1fef6c41f8c22b95dc4ee548232"
+        }
+      ]
+    }
+  ]
+}
