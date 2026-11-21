@@ -30,7 +30,11 @@ import urllib.request
 
 REPO = os.environ.get("PAGES_REPO", "ahXN00/OwnTV_Core")
 BRANCH = "gh-pages"
-SITE = os.environ.get("PAGES_SITE", "https://ahxn00.github.io/OwnTV_Core/maven")
+# Verified host follows REPO unless PAGES_SITE says otherwise: polling upstream's own Pages host for
+# the fork's artifacts just times out at 900 s and reports a publish that did land as a failure.
+SITE = os.environ.get("PAGES_SITE") or (
+    f"https://{REPO.split('/')[0].lower()}.github.io/{REPO.split('/')[1]}/maven"
+)
 GROUP_PATH = "tv/own/owntv"
 GROUP = "tv.own.owntv"
 CHECKSUMS = ("md5", "sha1", "sha256", "sha512")
