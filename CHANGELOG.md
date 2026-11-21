@@ -9,6 +9,13 @@
 > in one bolded line of its own (e.g. **Database v46 · Backup v24 · Breaking**). The detail — what,
 > why, files and verification — belongs in the commit message, never here.
 
+## core-1.0.72-rayge.16 — 2026-11-21
+
+### 🐛 Fixes
+
+- **The engine chip no longer says MPV before the stream starts on ExoPlayer**
+- **A decoder that gives up no longer rewinds the saved copy over and over**
+
 ## core-1.0.72-rayge.15 — 2026-11-20
 
 ### ✨ New features

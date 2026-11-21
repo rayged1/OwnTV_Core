@@ -1609,8 +1609,10 @@ class OwnTVPlayer(
     val streamChips: StateFlow<List<String>> = _streamChips.asStateFlow()
 
     /** First top-bar chip: which engine is decoding right now ("MPV", or "EXO" during an ExoPlayer
-     *  handoff/fallback/preferred VOD playback). */
-    private val _engineChip = MutableStateFlow<String?>("MPV")
+     *  handoff/fallback/preferred VOD playback). Null until an engine actually starts: defaulting to
+     *  "MPV" made every ExoPlayer tune read "MPV" until `startExo` ran, which looks like a channel
+     *  opening on mpv and then switching engines. */
+    private val _engineChip = MutableStateFlow<String?>(null)
     val engineChip: StateFlow<String?> = _engineChip.asStateFlow()
 
     /**
@@ -3632,6 +3634,8 @@ class OwnTVPlayer(
 
     private fun startLoad(url: String) {
         pendingUrl = null
+        // The chip names the engine that is loading, from the load itself rather than from a default.
+        _engineChip.value = "MPV"
         val gen = loadGeneration
         mpvAsync {
             // Superseded by a newer load or a stop while waiting in the queue? Skip the dead load —

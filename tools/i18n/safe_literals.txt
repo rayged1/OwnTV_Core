@@ -6345,6 +6345,7 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — its saved copy lost the connection ($why); opening it again
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — no fallback left ($detail)
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — no fallback left ($detail); leaving ExoPlayer's own reconnects running
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — the engine gave up on the decode itself ($reason), not on the feed;
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}' — the saved copy is drained at piece $piece (${behind}ms behind live):
 3	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}': $detail
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	'${channel.name}': $label — $reason
@@ -6356,14 +6357,18 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	engine toggle '${channel.name}' -> ${if (goToMpv) "mpv" else "exoplayer"}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	engine: $message
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	exoplayer
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	frames dropped faster than shown
 2	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv couldn't play it: ${outcome.error}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv handoff for '${channel.name}' abandoned — the channel changed while ExoPlayer released
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv never opened it (${MPV_OPEN_TIMEOUT_MS / 1000}s, no picture and no error)
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no decodable audio track
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no picture within ${armedBudgetMs / 1000}s of tuning
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	no playhead position
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	not playing the copy
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	not rewinding the saved copy
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	nothing saved ${STARVED_REWIND_MS / 1000}s back
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	picture frozen
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	rewinding its saved copy ${STARVED_REWIND_MS / 1000}s ($reason)
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	stalker reconnect re-resolve failed '${channel.name}'
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	stalker resolve failed

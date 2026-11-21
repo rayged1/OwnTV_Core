@@ -546,6 +546,16 @@ class LiveTuneController(
      * ladder behaves exactly as before.
      */
     private fun rewindStarvedCopy(channel: ChannelEntity, source: SourceEntity?, reason: String): Boolean {
+        // A decoder that cannot keep up is not a dry feed. Rewinding re-reads the same heavy piece and
+        // fails identically ~20 s later, which the viewer sees as the picture jumping backwards over and
+        // over instead of one honest failure — let the ladder move the stream to the other engine.
+        if (isDecoderSaturation(reason)) {
+            engineLog(
+                "'${channel.name}' — the engine gave up on the decode itself ($reason), not on the feed; " +
+                    "not rewinding the saved copy",
+            )
+            return false
+        }
         val session = ts?.takeIf { !it.isClosed }
         val local = TimeshiftServer.isLocal(engines.exoUrl)
         // Prefer the sample taken when it stalled: by now the engine's own reconnect may have re-primed
@@ -1081,6 +1091,12 @@ class LiveTuneController(
      *  its command has no host to key on until minted — a network call routing must not make. */
     private fun panelRefusesSegments(channel: ChannelEntity, source: SourceEntity?): Boolean =
         !host.needsResolve(source) && LiveStreamQuirks.refusesSegments(channel.playStreamUrl(source))
+
+    /** The engine's own reasons for giving up on the picture, as opposed to the feed running dry. */
+    private fun isDecoderSaturation(reason: String): Boolean =
+        reason.contains("frames dropped faster than shown", ignoreCase = true) ||
+            reason.contains("picture frozen", ignoreCase = true) ||
+            reason.contains("no decodable audio track", ignoreCase = true)
 
     private fun isRequestRefusal(reason: String): Boolean =
         PlayerErrors.httpStatusIn(reason)?.let { LiveStreamQuirks.isRequestRefusal(it) } == true
