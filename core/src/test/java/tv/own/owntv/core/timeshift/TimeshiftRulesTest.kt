@@ -20,11 +20,11 @@ class TimeshiftRulesTest {
     }
 
     @Test
-    fun `drops for the 1 GB floor even inside the window`() {
+    fun `drops for the free-space floor even inside the window`() {
         val durations = List(10) { 60_000L }
         val sizes = List(10) { 100 * mb }
-        // 800 MB free: needs 224 MB more -> three pieces of 100 MB.
-        assertEquals(3, TimeshiftRules.piecesToDrop(durations, sizes, windowMs = 60 * 60_000L, usableBytes = 800 * mb))
+        // 300 MB free, floor 384 MB: needs 84 MB more -> one piece of 100 MB.
+        assertEquals(1, TimeshiftRules.piecesToDrop(durations, sizes, windowMs = 60 * 60_000L, usableBytes = 300 * mb))
     }
 
     @Test
@@ -37,8 +37,8 @@ class TimeshiftRulesTest {
 
     @Test
     fun `starting needs the floor plus a margin, and the window follows the choices`() {
-        assertFalse(TimeshiftRules.canStart(gb))
-        assertTrue(TimeshiftRules.canStart(gb + 100 * mb))
+        assertFalse(TimeshiftRules.canStart(TimeshiftRules.FREE_FLOOR_BYTES - mb))
+        assertTrue(TimeshiftRules.canStart(TimeshiftRules.FREE_FLOOR_BYTES + TimeshiftRules.START_MARGIN_BYTES))
         assertEquals(30, TimeshiftRules.windowMinutesOf(30))
         assertEquals(15, TimeshiftRules.windowMinutesOf(0))
         assertEquals(15, TimeshiftRules.windowMinutesOf(120))

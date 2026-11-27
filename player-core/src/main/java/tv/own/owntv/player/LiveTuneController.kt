@@ -78,6 +78,11 @@ class LiveTuneController(
         val timeshift: TimeshiftManager? get() = null
         /** Settings → the window in minutes while local timeshift is on; null while it is off. */
         suspend fun timeshiftWindowMinutes(): Int? = null
+        /**
+         * A channel could not hold a rewind buffer, and why ("encrypted HLS", "only 412 MB free").
+         * The app writes it to its own error log, where a user can read it without logcat.
+         */
+        fun timeshiftRefused(channelName: String, why: String) {}
         /** Settings → what coming back to a kept copy does ("Continue where you left off?"). */
         suspend fun timeshiftResumeMode(): SettingsRepository.ResumeMode = SettingsRepository.ResumeMode.ASK
         /** Settings → Maximum video quality, for the variant a buffer saves; null for none. */
@@ -492,7 +497,11 @@ class LiveTuneController(
         )
         val opened = manager.open(key, target, window, TIMESHIFT_FIRST_PIECE_MS, leavingWallMs)
         if (opened == null) {
-            engineLog("timeshift: '${channel.name}' cannot be saved — playing it directly")
+            // The reason matters to more than logcat: it is the whole answer to "no rewind on this
+            // channel", and a television has no log reader. The app mirrors it into its error log.
+            val why = manager.lastRefusal ?: "unknown"
+            engineLog("timeshift: '${channel.name}' cannot be saved ($why) — playing it directly")
+            host.timeshiftRefused(channel.name, why)
             clearTimeshift()
             return false
         }
@@ -1163,6 +1172,21 @@ class LiveTuneController(
         override fun needsResolve(source: SourceEntity?): Boolean = resolver.needsResolve(source)
 
         override fun downloadHoldsOnlyStream(sourceId: Long): Boolean = downloadHolds(sourceId)
+
+        /**
+         * "no rewind on this channel" had no answer a user could read: the reason went to logcat,
+         * which a television cannot show. It goes into the same on-disk log the player's own failures
+         * use, so More → Error log names the channel and the reason.
+         */
+        override fun timeshiftRefused(channelName: String, why: String) {
+            PlaybackErrorLog.report(
+                context = context,
+                engine = "live",
+                live = true,
+                title = context.getString(tv.own.owntv.core.R.string.error_log_rewind_unavailable, channelName),
+                snapshot = why,
+            )
+        }
 
         override suspend fun resolve(source: SourceEntity, cmd: String): String? =
             runCatching { resolver.resolve(source, cmd) }

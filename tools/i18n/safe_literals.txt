@@ -5463,8 +5463,8 @@
 1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	buffer parked
 1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	buffer resumed by a returning player
 1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	no data in ${firstPieceTimeoutMs}ms
-1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	not buffering: $why
-1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	not buffering: ${space / (1024 * 1024)} MB free
+2	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	not buffering: $why
+1	log	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftManager.kt	only ${space / (1024 * 1024)} MB free
 1	technical	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftRules.kt	ENETUNREACH
 1	url	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftServer.kt	127.0.0.1
 1	protocol	core/src/main/java/tv/own/owntv/core/timeshift/TimeshiftServer.kt	Cache-Control: no-cache Connection: close
@@ -6358,6 +6358,7 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	engine: $message
 1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	exoplayer
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	frames dropped faster than shown
+1	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	live
 2	technical	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv couldn't play it: ${outcome.error}
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	mpv handoff for '${channel.name}' abandoned — the channel changed while ExoPlayer released
@@ -6380,10 +6381,10 @@
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the copy is closed
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the engine reports no media
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	the last rewind already replayed it; opening the live feed
-1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' cannot be saved — playing it directly
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	timeshift: '${channel.name}' plays from its saved copy
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	to replay and mpv reads the same copy; leaving ExoPlayer to reconnect
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	tune '${channel.name}' -> ${route.why} [${route.preference.name}]
+1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	unknown
 1	log	player-core/src/main/java/tv/own/owntv/player/LiveTuneController.kt	user chose compatibility mode
 1	log	player-core/src/main/java/tv/own/owntv/player/LogRepeats.kt	(repeated ×$held more)
 1	technical	player-core/src/main/java/tv/own/owntv/player/MpvAudioChannels.kt	,

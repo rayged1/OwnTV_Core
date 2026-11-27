@@ -6,8 +6,15 @@ package tv.own.owntv.core.timeshift
  */
 object TimeshiftRules {
 
-    /** Whatever the window, at least this much of the device stays free. */
-    const val FREE_FLOOR_BYTES = 1024L * 1024 * 1024
+    /**
+     * Whatever the window, at least this much of the device stays free.
+     *
+     * It was 1 GB, and that number silently turned rewind off on televisions that have little room
+     * left: the channel played, the setting was on, and nothing anywhere said why. A buffer is worth
+     * having on a full box — it is trimmed to this floor as it grows — so the floor is what the
+     * device needs, not what a comfortable one has.
+     */
+    const val FREE_FLOOR_BYTES = 384L * 1024 * 1024
 
     /** Not worth starting at all below the floor plus this: the buffer would only ever hold seconds. */
     const val START_MARGIN_BYTES = 64L * 1024 * 1024

@@ -74,6 +74,20 @@ class TimeshiftManager(
     /** `token to reason`: a buffer that had been playing lost its connection for good. It is closed. */
     val gaveUp: SharedFlow<Pair<String, String>> = _gaveUp.asSharedFlow()
 
+    /**
+     * Why the last [open] could not make a copy, for the app's error log and the tune's own log line:
+     * "only 412 MB free", "encrypted HLS", "no data in 12000ms"… Null when the last open succeeded.
+     * Most TV users can't read logcat, and "no rewind on this channel" is otherwise unanswerable.
+     */
+    @Volatile var lastRefusal: String? = null
+        private set
+
+    private fun refusalOf(result: TimeshiftDownloader.Result): String = when (result) {
+        is TimeshiftDownloader.Result.Unsupported -> result.why
+        is TimeshiftDownloader.Result.Refused -> result.why
+        is TimeshiftDownloader.Result.GaveUp -> result.why
+    }
+
     /** What [open] hands back: the buffer, and where the user was when they last left it (a return). */
     class Opened(val session: TimeshiftSession, val resumeAtWallMs: Long?)
 
@@ -97,6 +111,7 @@ class TimeshiftManager(
             val current = active
             if (current != null && current.session.channelKey == channelKey) {
                 current.windowMs = windowMs
+                lastRefusal = null
                 return Opened(current.session, null)
             }
             // The parked buffer is taken out BEFORE the channel being left is parked: parking evicts
@@ -115,13 +130,16 @@ class TimeshiftManager(
                 back.session.markGap()
                 startDownloadLocked(back)
                 active = back
+                lastRefusal = null
                 return Opened(back.session, back.leftAtWallMs)
             }
         }
         val folder = root()
         val space = withContext(Dispatchers.IO) { folder.mkdirs(); folder.usableSpace }
         if (!TimeshiftRules.canStart(space)) {
-            android.util.Log.i(TAG, "not buffering: ${space / (1024 * 1024)} MB free")
+            val why = "only ${space / (1024 * 1024)} MB free"
+            lastRefusal = why
+            android.util.Log.i(TAG, "not buffering: $why")
             return null
         }
         val token = UUID.randomUUID().toString().replace("-", "")
@@ -140,10 +158,12 @@ class TimeshiftManager(
             if (withContext(Dispatchers.IO) { session.awaitFirstPiece(FIRST_PIECE_SLICE_MS) }) {
                 // Idle-parking counts from here: the player is about to be told the address.
                 onReadersChanged(buffer)
+                lastRefusal = null
                 return Opened(session, null)
             }
         }
-        val why = if (result.isCompleted) result.await().toString() else "no data in ${firstPieceTimeoutMs}ms"
+        val why = if (result.isCompleted) refusalOf(result.await()) else "no data in ${firstPieceTimeoutMs}ms"
+        lastRefusal = why
         android.util.Log.i(TAG, "not buffering: $why")
         closeBuffer(buffer)
         return null
