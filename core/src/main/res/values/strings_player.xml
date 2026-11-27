@@ -87,7 +87,7 @@
     <!-- Translators: Label under the report-stream button on the player control bar, shown when it has focus. Keep this very short (14 characters maximum) — it sits inside the button on the remote-driven player bar. -->
     <string name="player_tool_report">Report</string>
     <!-- Translators: Title of an Error-log entry saying a live channel cannot keep a rewind buffer, so the player offers no rewind on it. %1$s is the channel name; the reason is on the line below. -->
-    <string name="error_log_rewind_unavailable">Rewind unavailable — %1$s</string>
+    <string name="error_log_rewind_unavailable">Rewind unavailable — <xliff:g id="channel">%1$s</xliff:g></string>
     <!-- Translators: Error text in the direct-tune channel number card when the entered number matches no known channel. -->
     <string name="player_channel_not_found">Channel not found</string>
     <string name="player_channel_number_entry">Channel number</string>
