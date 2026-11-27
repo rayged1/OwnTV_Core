@@ -9,6 +9,13 @@
 > in one bolded line of its own (e.g. **Database v46 · Backup v24 · Breaking**). The detail — what,
 > why, files and verification — belongs in the commit message, never here.
 
+## core-1.0.72-rayge.17 — 2026-11-27
+
+### 🐛 Fixes
+
+- **Timeshift says why a channel cannot be saved — reason in More → Error log**
+- **Buffer floor is 384 MB, so a nearly full device gets a shorter rewind instead of none**
+
 ## core-1.0.72-rayge.16 — 2026-11-21
 
 ### 🐛 Fixes
