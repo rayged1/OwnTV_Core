@@ -15,6 +15,7 @@
 
 - **Timeshift says why a channel cannot be saved — reason in More → Error log**
 - **Buffer floor is 384 MB, so a nearly full device gets a shorter rewind instead of none**
+- **The daily sync window survives a settings backup and restore**
 
 ## core-1.0.72-rayge.16 — 2026-11-21
 

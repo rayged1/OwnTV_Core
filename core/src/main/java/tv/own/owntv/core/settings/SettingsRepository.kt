@@ -3236,6 +3236,10 @@ class SettingsRepository(private val context: Context, private val localeStore: 
             Keys.DOWNLOAD_ROOT,
             // Nav menu mode rides with settings backup so a reinstall keeps the user's DYNAMIC/STATIC choice.
             Keys.NAV_MENU_MODE,
+            // Daily sync window: whether it is on and which hour it opens. A global user choice like any
+            // other preference — the source ids it refreshes are the device's own (playlist_auto_refresh /
+            // epg_auto_refresh stay out of the whitelist), so the stored "ON<hh>" / "OFF" travels as-is.
+            Keys.DAILY_SYNC,
             // Stage navigation style, size and length (the hide delay is an int key).
             Keys.NAV_STYLE, Keys.NAV_SIZE, Keys.NAV_LENGTH, Keys.NAV_WIDEN,
             // The chosen icon colour. After a restore the app compares it with the applied icon and offers a restart.
